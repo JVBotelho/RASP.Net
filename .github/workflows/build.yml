@@ -1,0 +1,105 @@
+name: Build, Test & Security
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  SOLUTION_NAME: 'Rasp.sln' 
+
+jobs:
+  build-and-test:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup .NET 10 (Preview)
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        dotnet-quality: 'preview'
+        cache: true
+        cache-dependency-path: '**/packages.lock.json'
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_NAME }}
+
+    - name: Build (Release)
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+
+    - name: Run Tests
+      run: dotnet test ${{ env.SOLUTION_NAME }} --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx"
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.os }}
+        path: '**/test-results-*.trx'
+
+  security-audit:
+    name: Security & Compliance
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        dotnet-quality: 'preview'
+
+    - name: Restore
+      run: dotnet restore ${{ env.SOLUTION_NAME }}
+
+    # 1. Check for Vulnerable Packages (Fail on Critical/High)
+    - name: NuGet Vulnerability Scan
+      run: |
+        dotnet list ${{ env.SOLUTION_NAME }} package --vulnerable --include-transitive --framework net10.0 > vulnerabilities.txt
+        cat vulnerabilities.txt
+        if grep -q "Critical" vulnerabilities.txt; then
+          echo "::error::Critical vulnerabilities found in dependencies!"
+          exit 1
+        fi
+        if grep -q "High" vulnerabilities.txt; then
+          echo "::warning::High vulnerabilities found. Consider updating."
+          # Descomente para quebrar em High também
+          # exit 1
+        fi
+
+    # 2. Code Formatting (Enforce Style)
+    - name: Verify Formatting
+      run: dotnet format ${{ env.SOLUTION_NAME }} --verify-no-changes --verbosity diagnostic
+
+    # 3. CodeQL Analysis
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: csharp
+
+    - name: Build for CodeQL
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration Release /p:UseSharedCompilation=false
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
