@@ -1,0 +1,3 @@
+[submodule "modules/dotnet-grpc-library-api"]
+	path = modules/dotnet-grpc-library-api
+	url = https://github.com/jvbotelho/dotnet-grpc-library-api.git
