@@ -3,8 +3,8 @@
 ![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![Security](https://img.shields.io/badge/Security-RASP-red?style=for-the-badge&logo=shield&logoColor=white)
 ![Architecture](https://img.shields.io/badge/Architecture-Composite-blue?style=for-the-badge)
-![Build](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/RASP.Net/build.yml?style=for-the-badge)
-![Coverage](https://img.shields.io/codecov/c/github/YOUR_USERNAME/RASP.Net?style=for-the-badge)
+![Build](https://img.shields.io/github/actions/workflow/status/JVBotelho/RASP.Net/build.yml?style=for-the-badge)
+![Coverage](https://img.shields.io/codecov/c/github/JVBotelho/RASP.Net?style=for-the-badge)
 
 > **Runtime Application Self-Protection (RASP) SDK for .NET 10.**  
 > *Active defense residing inside the application process.*
