@@ -19,7 +19,7 @@ public static class RaspDependencyInjection
     /// <param name="configureOptions">Optional delegate to configure RASP behavior.</param>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddRasp(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         Action<RaspOptions>? configureOptions = null)
     {
         if (configureOptions != null)

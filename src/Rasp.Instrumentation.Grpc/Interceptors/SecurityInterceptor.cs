@@ -42,10 +42,10 @@ public class SecurityInterceptor : Interceptor
             {
                 // --- 2. BLOCKING PHASE ---
                 _metrics.ReportThreat("gRPC", result.ThreatType!, blocked: true);
-                
+
                 // Fail Fast with PermissionDenied (or InvalidArgument)
                 throw new RpcException(new Status(
-                    StatusCode.PermissionDenied, 
+                    StatusCode.PermissionDenied,
                     $"RASP Security Alert: {result.Description}"));
             }
 

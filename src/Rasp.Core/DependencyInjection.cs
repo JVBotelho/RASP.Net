@@ -16,7 +16,7 @@ public static class DependencyInjection
     {
         services.TryAddSingleton<IRaspMetrics, RaspMetrics>();
         services.TryAddSingleton<IDetectionEngine, RegexDetectionEngine>();
-        
+
         return services;
     }
 }

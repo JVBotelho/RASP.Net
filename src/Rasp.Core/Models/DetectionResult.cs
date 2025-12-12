@@ -54,12 +54,12 @@ public sealed record DetectionResult
         ThreatSeverity severity = ThreatSeverity.High,
         double confidence = 1.0,
         string? matchedPattern = null) => new()
-    {
-        IsThreat = true,
-        ThreatType = threatType,
-        Description = description,
-        Severity = severity,
-        Confidence = confidence,
-        MatchedPattern = matchedPattern
-    };
+        {
+            IsThreat = true,
+            ThreatType = threatType,
+            Description = description,
+            Severity = severity,
+            Confidence = confidence,
+            MatchedPattern = matchedPattern
+        };
 }
