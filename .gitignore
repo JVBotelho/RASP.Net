@@ -482,3 +482,105 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+## ----------------------------------------------------------------------
+## .NET / Visual Studio / Rider
+## ----------------------------------------------------------------------
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# IDEs & Tooling
+.vs/
+.vscode/
+.idea/
+*.sln.iml
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.dockerignore
+.env
+
+# Testing
+[Tt]est[Rr]esult*/
+BenchmarkDotNet.Artifacts/
+coverage*.json
+coverage*.xml
+*.coverage
+*.coveragexml
+
+## ----------------------------------------------------------------------
+## Python (Red Team Tools)
+## ----------------------------------------------------------------------
+
+# Byte-compiled / Optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / Packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+## ----------------------------------------------------------------------
+## OS Specific
+## ----------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------------------------------------------------------
+# Generated gRPC Python Files (Do Not Commit)
+# ----------------------------------------------------------------------
+attack/*_pb2.py
+attack/*_pb2_grpc.py
+attack/*.pyi
