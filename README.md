@@ -119,7 +119,7 @@ sequenceDiagram
 
 Use the `--recursive` flag to fetch the Target Application code:
 ```bash
-git clone --recursive https://github.com/YOUR_USERNAME/RASP.Net.git
+git clone --recursive https://github.com/JVBotelho/RASP.Net.git
 ```
 
 If you have already cloned without the flag:
@@ -176,9 +176,9 @@ The Composite Solution allows you to debug the SDK as if it were part of the app
 
 ## 🎯 Roadmap
 
-- [ ] **Phase 1**: Setup & Vulnerability injection in Target App
-- [ ] **Phase 2**: gRPC Interceptor with payload inspection
-- [ ] **Phase 3**: EF Core Interceptor with SQL analysis
+- [x] **Phase 1**: Setup & Vulnerability injection in Target App
+- [x] **Phase 2**: gRPC Interceptor with payload inspection
+- [ ] **Phase 3**: EF Core Interceptor with SQL analysis 🚧 **IN PROGRESS**
 - [ ] **Phase 4**: Benchmarks & Documentation
 
 ---
