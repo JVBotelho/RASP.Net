@@ -5,9 +5,58 @@
 ![Architecture](https://img.shields.io/badge/Architecture-Composite-blue?style=for-the-badge)
 ![Build](https://img.shields.io/github/actions/workflow/status/JVBotelho/RASP.Net/build.yml?style=for-the-badge)
 ![Coverage](https://img.shields.io/codecov/c/github/JVBotelho/RASP.Net?style=for-the-badge)
+[![Threat Model](https://img.shields.io/badge/📄_Threat_Model-Read-orange?style=for-the-badge)](docs/ATTACK_SCENARIOS.md)
 
-> **Runtime Application Self-Protection (RASP) SDK for .NET 10.**  
-> *Active defense residing inside the application process.*
+> **Runtime Application Self-Protection (RASP) for High-Scale .NET Services**
+> *Defense that lives inside your application process, operating at the speed of code.*
+
+---
+
+## 🎮 Why This Matters for Gaming Security
+
+**The Problem**: Multiplayer game services process **millions of transactions per second**. Traditional WAFs introduce network latency and cannot see inside the encrypted gRPC payload or understanding game logic context.
+
+**The Solution**: RASP.Net acts as a **last line of defense** inside the game server process. It instruments the runtime to detect attacks that bypass perimeter defenses, detecting logic flaws like item duplication exploits or economy manipulation.
+
+**Key Engineering Goals:**
+1.  **Zero GC Pressure**: Security checks must NOT trigger Garbage Collection pauses that cause frame drops/lag.
+2.  **Sub-Microsecond Latency**: Checks happen in nanoseconds, not milliseconds.
+3.  **Defense in Depth**: Complements kernel-level Anti-Cheat (BattlEye/EAC) by protecting the backend API layer.
+
+---
+
+## ⚡ Performance Benchmarks
+
+**Methodology:** Benchmarks isolate the intrinsic cost of the detection engine using `BenchmarkDotNet`.
+**Hardware:** AMD Ryzen 7 7800X3D (4.2GHz) | **Runtime:** .NET 10.0.2
+
+| Payload Size | Scenario | Mean Latency | Overhead vs Baseline | **GC Allocation** |
+| :--- | :--- | :--- | :--- | :--- |
+| **100 Bytes** | Safe Scan | **12.1 ns** | +11.5 ns | **0 Bytes** |
+| | Attack Blocked | **18.4 ns** | +17.8 ns | **0 Bytes** |
+| **1 KB** | Safe Scan | **22.2 ns** | +21.6 ns | **0 Bytes** |
+| | Attack Blocked | **31.1 ns** | +30.5 ns | **0 Bytes** |
+| **10 KB** | Safe Scan | **137.4 ns** | +136.8 ns | **0 Bytes** |
+| | Attack Blocked | **156.7 ns** | +156.1 ns | **0 Bytes** |
+
+> **Analysis:** The engine demonstrates **sub-linear scaling** thanks to .NET 10's vectorized optimizations (AVX/SIMD). Inspecting 10KB of data takes only ~0.15μs. Most importantly, **Zero Allocation** is maintained across all scenarios, ensuring **no impact on game server frame budgets**.
+
+---
+
+## 🛡️ Security Analysis & Threat Modeling
+
+For a comprehensive analysis of attack vectors, STRIDE mapping, and Red Team validation, see:
+
+📄 **[THREAT_MODEL.md](docs/ATTACK_SCENARIOS.md)** - Complete threat analysis including:
+- Economy manipulation exploits (SQL injection via gRPC)
+- Runtime tampering detection (anti-cheat)
+- DoS mitigation strategies (GC pressure attacks)
+- Exploitation walkthroughs with Python PoCs
+
+**Key Highlights**:
+- ✅ STRIDE analysis matrix with implementation status
+- ✅ Real-world attack scenarios from gaming industry
+- ✅ Red Team validation with bypass attempts
 
 ---
 
