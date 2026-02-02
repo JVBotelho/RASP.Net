@@ -6,7 +6,7 @@
 ![Build](https://img.shields.io/github/actions/workflow/status/JVBotelho/RASP.Net/build.yml?style=for-the-badge)
 ![Coverage](https://img.shields.io/codecov/c/github/JVBotelho/RASP.Net?style=for-the-badge)
 [![Threat Model](https://img.shields.io/badge/📄_Threat_Model-Read-orange?style=for-the-badge)](docs/ATTACK_SCENARIOS.md)
-
+[![Reverse Engineering](https://img.shields.io/badge/🕵️_Anti--Debug-Research-blueviolet?style=for-the-badge)](docs/REVERSE_ENGINEERING.md)
 > **Runtime Application Self-Protection (RASP) for High-Scale .NET Services**
 > *Defense that lives inside your application process, operating at the speed of code.*
 
@@ -27,36 +27,39 @@
 
 ## ⚡ Performance Benchmarks
 
-**Methodology:** Benchmarks isolate the intrinsic cost of the detection engine using `BenchmarkDotNet`.
+**Methodology:** Benchmarks isolate the intrinsic cost of the `SqlInjectionDetectionEngine` using `BenchmarkDotNet`.
 **Hardware:** AMD Ryzen 7 7800X3D (4.2GHz) | **Runtime:** .NET 10.0.2
 
-| Payload Size | Scenario | Mean Latency | Overhead vs Baseline | **GC Allocation** |
+| Payload Size | Scenario | Mean Latency | Allocation | Verdict |
 | :--- | :--- | :--- | :--- | :--- |
-| **100 Bytes** | Safe Scan | **12.1 ns** | +11.5 ns | **0 Bytes** |
-| | Attack Blocked | **18.4 ns** | +17.8 ns | **0 Bytes** |
-| **1 KB** | Safe Scan | **22.2 ns** | +21.6 ns | **0 Bytes** |
-| | Attack Blocked | **31.1 ns** | +30.5 ns | **0 Bytes** |
-| **10 KB** | Safe Scan | **137.4 ns** | +136.8 ns | **0 Bytes** |
-| | Attack Blocked | **156.7 ns** | +156.1 ns | **0 Bytes** |
+| **100 Bytes** | ✅ Safe Scan (Hot Path) | **4.3 ns** | **0 Bytes** | **Zero-Alloc** 🚀 |
+| | 🛡️ Attack Detected | **202.0 ns** | 232 Bytes | Blocked |
+| **1 KB** | ✅ Safe Scan (Hot Path) | **16.4 ns** | **0 Bytes** | **Zero-Alloc** 🚀 |
+| | 🛡️ Attack Detected | **1,036 ns** | 232 Bytes | Blocked |
+| **10 KB** | ✅ Safe Scan (Hot Path) | **141.0 ns** | **0 Bytes** | **Zero-Alloc** 🚀 |
+| | ⚠️ Deep Inspection | **5,871 ns** | 0 Bytes | Suspicious |
 
-> **Analysis:** The engine demonstrates **sub-linear scaling** thanks to .NET 10's vectorized optimizations (AVX/SIMD). Inspecting 10KB of data takes only ~0.15μs. Most importantly, **Zero Allocation** is maintained across all scenarios, ensuring **no impact on game server frame budgets**.
+> **Key Takeaway:**
+> * **Hot Path Optimization:** For 99% of legitimate traffic (Safe Scan), the engine uses vectorized SIMD checks (`SearchValues<T>`), incurring negligible overhead (**~4ns**).
+> * **Zero Allocation:** The inspection pipeline uses `stackalloc` and `Span<T>` buffers, ensuring **0 GC Pressure** during routine checks.
+> * **Deep Inspection:** Only when suspicious characters (e.g., `'`, `--`) are detected does the engine perform full normalization, costing a few microseconds but protecting the app.
 
 ---
 
 ## 🛡️ Security Analysis & Threat Modeling
 
-For a comprehensive analysis of attack vectors, STRIDE mapping, and Red Team validation, see:
+This repository contains professional-grade security documentation demonstrating **Purple Team** capabilities.
 
-📄 **[THREAT_MODEL.md](docs/ATTACK_SCENARIOS.md)** - Complete threat analysis including:
-- Economy manipulation exploits (SQL injection via gRPC)
-- Runtime tampering detection (anti-cheat)
-- DoS mitigation strategies (GC pressure attacks)
-- Exploitation walkthroughs with Python PoCs
+### 📄 [Threat Model & Attack Scenarios](docs/ATTACK_SCENARIOS.md)
+A comprehensive STRIDE analysis of the Game Economy architecture.
+- **Vectors**: gRPC SQL Injection, Protobuf Tampering, GC Pressure DoS.
+- **Validation**: Python exploit walkthroughs and mitigation strategies.
 
-**Key Highlights**:
-- ✅ STRIDE analysis matrix with implementation status
-- ✅ Real-world attack scenarios from gaming industry
-- ✅ Red Team validation with bypass attempts
+### 🕵️ [Reverse Engineering & Anti-Tamper](docs/REVERSE_ENGINEERING.md)
+A deep dive into the Native C++ Protection Layer.
+- **Internals**: Analysis of `IsDebuggerPresent`, PEB manipulation, and timing checks.
+- **Bypasses**: Documentation of known evasion techniques (ScyllaHide, Detours) to demonstrate adversarial thinking.
+- **Roadmap**: Advanced heuristics (RDTSC/SEH) for Phase 2.
 
 ---
 
