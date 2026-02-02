@@ -15,7 +15,7 @@ public static class DependencyInjection
     public static IServiceCollection AddRaspCore(this IServiceCollection services)
     {
         services.TryAddSingleton<IRaspMetrics, RaspMetrics>();
-        services.TryAddSingleton<IDetectionEngine, RegexDetectionEngine>();
+        services.TryAddSingleton<IDetectionEngine, SqlInjectionDetectionEngine>();
 
         return services;
     }

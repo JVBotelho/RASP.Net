@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Attributes;
+using Microsoft.Extensions.Logging.Abstractions;
 using Rasp.Core.Abstractions;
 using Rasp.Core.Engine;
 using Rasp.Core.Models;
@@ -38,10 +39,12 @@ public class InterceptorBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        var regexEngine = new RegexDetectionEngine();
+        var sqlEngine = new SqlInjectionDetectionEngine(
+            NullLogger<SqlInjectionDetectionEngine>.Instance
+        );
         var metrics = new NoOpMetrics();
         
-        _realInterceptor = new SecurityInterceptor(regexEngine, metrics);
+        _realInterceptor = new SecurityInterceptor(sqlEngine, metrics);
         _baselineInterceptor = new SecurityInterceptor(new NoOpDetectionEngine(), metrics);
 
         _simpleSafePayload = new string('a', PayloadSize);
