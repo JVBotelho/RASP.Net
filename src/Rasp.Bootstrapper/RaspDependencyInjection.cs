@@ -35,6 +35,8 @@ public static class RaspDependencyInjection
         {
             options.Interceptors.Add<SecurityInterceptor>();
         });
+        
+        services.AddHostedService<RaspIntegrityService>();
 
         return services;
     }
