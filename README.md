@@ -78,6 +78,39 @@ It is designed to develop and validate the Security SDK (`Rasp.*`) by instrument
 
 ---
 
+## 🛡️ How It Works (Attack Flow)
+
+```mermaid
+sequenceDiagram
+    participant Attacker
+    participant gRPC as gRPC Gateway
+    participant RASP as 🛡️ RASP.Net
+    participant GameAPI as Game Service
+    participant DB as Database
+    
+    Note over Attacker,RASP: 🔴 Attack Scenario: Item Duplication
+    Attacker->>gRPC: POST /inventory/add {item: "Sword' OR 1=1"}
+    gRPC->>RASP: Intercept Request
+    
+    activate RASP
+    RASP->>RASP: ⚡ Zero-Alloc Inspection
+    RASP-->>Attacker: ❌ 403 Forbidden (Threat Detected)
+    deactivate RASP
+    
+    Note over Attacker,DB: 🟢 Legitimate Scenario
+    Attacker->>gRPC: POST /inventory/add {item: "Legendary Sword"}
+    gRPC->>RASP: Intercept Request
+    
+    activate RASP
+    RASP->>GameAPI: ✅ Clean - Forward Request
+    deactivate RASP
+    
+    GameAPI->>DB: INSERT INTO inventory...
+    DB-->>GameAPI: Success
+    GameAPI-->>Attacker: 200 OK
+```
+---
+
 ## 🚀 Setup & Build
 
 ⚠️ **CRITICAL:** This repository relies on submodules. A standard clone will result in missing projects.
