@@ -1,8 +1,11 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Rasp.Core.Abstractions;
+using Rasp.Core.Models;
 
+[assembly: InternalsVisibleTo("Rasp.Benchmarks")]
 namespace Rasp.Instrumentation.Grpc.Interceptors;
 
 /// <summary>
@@ -18,6 +21,11 @@ public class SecurityInterceptor : Interceptor
     {
         _detectionEngine = detectionEngine;
         _metrics = metrics;
+    }
+    
+    internal DetectionResult InspectInternal(string payload)
+    {
+        return _detectionEngine.Inspect(payload, "BenchmarkContext");
     }
 
     public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
