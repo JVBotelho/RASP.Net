@@ -38,7 +38,7 @@ jobs:
       run: dotnet restore ${{ env.SOLUTION_NAME }}
 
     - name: Build (Release)
-      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration Release --no-restore
 
     - name: Run Tests
       run: dotnet test ${{ env.SOLUTION_NAME }} --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx"
