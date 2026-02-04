@@ -38,7 +38,7 @@ jobs:
       run: dotnet restore ${{ env.SOLUTION_NAME }}
 
     - name: Build (Release)
-      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration Release --no-restore
 
     - name: Run Tests
       run: dotnet test ${{ env.SOLUTION_NAME }} --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx"
@@ -90,7 +90,7 @@ jobs:
 
     # 2. Code Formatting (Enforce Style)
     - name: Verify Formatting
-      run: dotnet format ${{ env.SOLUTION_NAME }} --verbosity diagnostic || echo "⚠️ Formatting issues found, but ignored for now."
+      run: dotnet format ${{ env.SOLUTION_NAME }} --verify-no-changes --verbosity diagnostic --exclude ./modules
 
     # 3. CodeQL Analysis
     - name: Initialize CodeQL

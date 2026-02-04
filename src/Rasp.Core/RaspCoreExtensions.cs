@@ -6,7 +6,7 @@ using Rasp.Core.Telemetry;
 
 namespace Rasp.Core;
 
-public static class DependencyInjection
+public static class RaspCoreExtensions
 {
     /// <summary>
     /// Registers the RASP Core services (Telemetry, Contracts).
@@ -15,7 +15,7 @@ public static class DependencyInjection
     public static IServiceCollection AddRaspCore(this IServiceCollection services)
     {
         services.TryAddSingleton<IRaspMetrics, RaspMetrics>();
-        services.TryAddSingleton<IDetectionEngine, RegexDetectionEngine>();
+        services.TryAddSingleton<IDetectionEngine, SqlInjectionDetectionEngine>();
 
         return services;
     }

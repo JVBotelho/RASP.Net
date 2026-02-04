@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rasp.Core.Tests", "Rasp.Cor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rasp.Instrumentation.Grpc.Tests", "Rasp.Instrumentation.Grpc.Tests\Rasp.Instrumentation.Grpc.Tests.csproj", "{6F314CAD-E989-41CA-8C9C-9FD721F5DA50}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rasp.Benchmarks", "src\Rasp.Benchmarks\Rasp.Benchmarks.csproj", "{510A8737-2E89-4BF4-9F29-2AD7ACABB044}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -175,6 +177,18 @@ Global
 		{6F314CAD-E989-41CA-8C9C-9FD721F5DA50}.Release|x64.Build.0 = Release|Any CPU
 		{6F314CAD-E989-41CA-8C9C-9FD721F5DA50}.Release|x86.ActiveCfg = Release|Any CPU
 		{6F314CAD-E989-41CA-8C9C-9FD721F5DA50}.Release|x86.Build.0 = Release|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Debug|x64.Build.0 = Debug|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Debug|x86.Build.0 = Debug|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Release|Any CPU.Build.0 = Release|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Release|x64.ActiveCfg = Release|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Release|x64.Build.0 = Release|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Release|x86.ActiveCfg = Release|Any CPU
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -192,5 +206,6 @@ Global
 		{689C3555-DC1F-4A87-B349-500DF85B9F39} = {87C876C9-7554-CEDF-203F-AF43B1B74702}
 		{9FF0212B-D43D-46D7-AAD4-3793958CA197} = {7BF13981-E617-4FF6-9463-B251628BAF1E}
 		{6F314CAD-E989-41CA-8C9C-9FD721F5DA50} = {7BF13981-E617-4FF6-9463-B251628BAF1E}
+		{510A8737-2E89-4BF4-9F29-2AD7ACABB044} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal
