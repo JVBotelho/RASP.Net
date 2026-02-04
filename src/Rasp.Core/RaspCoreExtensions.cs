@@ -6,7 +6,7 @@ using Rasp.Core.Telemetry;
 
 namespace Rasp.Core;
 
-public static class DependencyInjection
+public static class RaspCoreExtensions
 {
     /// <summary>
     /// Registers the RASP Core services (Telemetry, Contracts).
