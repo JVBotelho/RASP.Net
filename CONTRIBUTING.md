@@ -13,7 +13,7 @@ The **Hot Path** refers to the detection engine's core loops and interceptors wh
 
 #### 💡  Memory Management Pattern
 
-When handling variable-sized buffers, always use the hybrid approach. Use the **Stack** for small payloads and the **ArrayPool** for larger ones. This avoids heap allocations while protecting against `StackOverflowException`.
+When handling variable-sized buffers, always use the hybrid approach. Use the **Stack** for small payloads and the **ArrayPool** for larger ones. This avoids heap allocations while protecting against `StackOverflowException`. 
 
 ```csharp
 // 1. Safety check: avoid invalid or empty allocations
