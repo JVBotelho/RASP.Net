@@ -101,7 +101,7 @@ public class InterceptorBenchmarks
         return await _baselineInterceptor.UnaryServerHandler(
             _safeRequest,
             _context,
-            _continuationDelegate);
+            _continuationDelegate).ConfigureAwait(false);
     }
 
     [Benchmark]
@@ -111,7 +111,7 @@ public class InterceptorBenchmarks
         return await _realInterceptor.UnaryServerHandler(
             _safeRequest,
             _context,
-            _continuationDelegate);
+            _continuationDelegate).ConfigureAwait(false);
     }
 
     [Benchmark]
@@ -123,7 +123,7 @@ public class InterceptorBenchmarks
             await _realInterceptor.UnaryServerHandler(
                 _attackRequest,
                 _context,
-                _continuationDelegate);
+                _continuationDelegate).ConfigureAwait(false);
         }
         catch (RpcException)
         {

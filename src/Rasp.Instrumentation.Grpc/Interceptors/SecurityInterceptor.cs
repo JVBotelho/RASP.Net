@@ -26,12 +26,15 @@ public class SecurityInterceptor(IDetectionEngine detectionEngine, IRaspMetrics 
         ServerCallContext context,
         UnaryServerMethod<TRequest, TResponse> continuation)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(continuation);
+        
         var sw = Stopwatch.StartNew();
         string method = context.Method;
 
         try
         {
-            if (request is not IMessage protoMessage) return await continuation(request, context);
+            if (request is not IMessage protoMessage) return await continuation(request, context).ConfigureAwait(false);
             var fields = protoMessage.Descriptor.Fields.InFieldNumberOrder();
 
             foreach (var field in fields)
@@ -50,7 +53,7 @@ public class SecurityInterceptor(IDetectionEngine detectionEngine, IRaspMetrics 
                     $"RASP Security Alert: {result.Description}"));
             }
 
-            return await continuation(request, context);
+            return await continuation(request, context).ConfigureAwait(false);
         }
         finally
         {
