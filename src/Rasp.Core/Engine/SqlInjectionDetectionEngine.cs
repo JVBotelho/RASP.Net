@@ -15,7 +15,7 @@ namespace Rasp.Core.Engine;
 /// and zero heap allocations for the vast majority of legitimate traffic.
 /// </para>
 /// </summary>
-public class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEngine> logger) : IDetectionEngine
+public partial class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEngine> logger) : IDetectionEngine
 {
     private static readonly SearchValues<char> DangerousChars =
         SearchValues.Create("'-;/*");
@@ -79,9 +79,8 @@ public class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEngine> lo
             double score = SqlHeuristics.CalculateScore(searchSpace);
 
             if (!(score >= 1.0)) return DetectionResult.Safe();
-            logger.LogWarning("⚔️ RASP Blocked SQLi! Score: {Score} Context: {Context}", score, context);
+            LogBlockedSqlInjection(logger, score, context);
 
-            // FIX 2: Usando o Factory Method estático que resolve os erros de inicialização
             return DetectionResult.Threat(
                 threatType: "SQL Injection",
                 description: $"SQL Injection Patterns Detected (Score: {score})",
@@ -99,4 +98,10 @@ public class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEngine> lo
             }
         }
     }
+    
+    [LoggerMessage(
+        EventId = 1, 
+        Level = LogLevel.Warning, 
+        Message = "⚔️ RASP Blocked SQLi! Score: {Score} Context: {Context}")]
+    private static partial void LogBlockedSqlInjection(ILogger logger, double score, string context);
 }
