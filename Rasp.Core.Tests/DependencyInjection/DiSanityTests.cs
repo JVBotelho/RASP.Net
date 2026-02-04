@@ -20,18 +20,18 @@ public class DiSanityTests
     {
         // 1. Arrange
         var services = new ServiceCollection();
-        
-        var config = new ConfigurationBuilder().Build(); 
-    
+
+        var config = new ConfigurationBuilder().Build();
+
         services.AddSingleton<IConfiguration>(config);
         services.AddLogging();
-    
-        services.AddGrpc(); 
+
+        services.AddGrpc();
 
         // 2. Act
-        services.AddRasp(opt => 
+        services.AddRasp(opt =>
         {
-            opt.BlockOnDetection = true; 
+            opt.BlockOnDetection = true;
             opt.EnableMetrics = false;
         });
 

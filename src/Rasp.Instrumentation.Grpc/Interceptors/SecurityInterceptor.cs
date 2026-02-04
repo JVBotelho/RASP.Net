@@ -28,7 +28,7 @@ public class SecurityInterceptor(IDetectionEngine detectionEngine, IRaspMetrics 
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(continuation);
-        
+
         var sw = Stopwatch.StartNew();
         string method = context.Method;
 

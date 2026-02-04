@@ -98,10 +98,10 @@ public partial class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEn
             }
         }
     }
-    
+
     [LoggerMessage(
-        EventId = 1, 
-        Level = LogLevel.Warning, 
+        EventId = 1,
+        Level = LogLevel.Warning,
         Message = "⚔️ RASP Blocked SQLi! Score: {Score} Context: {Context}")]
     private static partial void LogBlockedSqlInjection(ILogger logger, double score, string context);
 }

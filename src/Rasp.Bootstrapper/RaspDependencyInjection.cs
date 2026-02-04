@@ -29,7 +29,7 @@ public static class RaspDependencyInjection
         }
 
         services.AddRaspCore();
-        
+
         services.AddSingleton<NativeGuard>();
 
         services.AddSingleton<SecurityInterceptor>();
