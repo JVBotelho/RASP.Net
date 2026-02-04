@@ -1,47 +1,59 @@
 ﻿using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 
 namespace Rasp.Bootstrapper.Native;
 
-internal static partial class NativeGuard
+public partial class NativeGuard(ILogger<NativeGuard> logger)
 {
-    private const string DllName = "Rasp.Native.Guard.dll";
+    private const string LibraryName = "Rasp.Native.Guard.dll";
 
-    [LibraryImport(DllName)]
-    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [LibraryImport(LibraryName, EntryPoint = "CheckEnvironment")]
+    [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
     private static partial int CheckEnvironment();
 
-    public static void AssertIntegrity(ILogger logger)
+    public void AssertIntegrity()
     {
+        LogStartingCheck();
+
         try
         {
-            logger.LogInformation("[RASP NATIVE] 🔍 Checking process integrity...");
+            int result = CheckEnvironment();
 
-            var status = CheckEnvironment();
-
-            if (status != 0)
+            if (result != 0)
             {
-                var threat = status switch
-                {
-                    101 => "Basic Debugger (PEB Flag)",
-                    102 => "Remote Debugger (Debug Port)",
-                    _ => "Unknown Anomaly"
-                };
-
-                logger.LogCritical("[RASP NATIVE] 🚨 Integrity Violation! Threat: {ThreatCode} - {Desc}", status, threat);
-                throw new System.Security.SecurityException($"RASP Integrity Violation: {threat}");
+                LogIntegrityViolation(result);
             }
-
-            logger.LogInformation("[RASP NATIVE] ✅ Environment Clean. No debuggers detected.");
+            else
+            {
+                LogIntegrityVerified();
+            }
         }
         catch (DllNotFoundException)
         {
-            logger.LogWarning("[RASP NATIVE] ⚠️ Guard DLL not found. Skipping OS-level checks.");
+            LogNativeLibMissing();
         }
+#pragma warning disable CA1031
         catch (Exception ex)
+#pragma warning restore CA1031
         {
-            logger.LogError(ex, "[RASP NATIVE] ❌ Failed to execute native checks.");
+            LogIntegrityCheckFailed(ex);
         }
     }
+
+    // --- LOGGING (Instance Methods) ---
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "🛡️ Initializing Native Integrity Guard...")]
+    private partial void LogStartingCheck();
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Critical, Message = "🚨 NATIVE INTEGRITY VIOLATION DETECTED! Code: {Result}")]
+    private partial void LogIntegrityViolation(int result);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "✅ Native Environment Integrity Verified.")]
+    private partial void LogIntegrityVerified();
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Warning, Message = "⚠️ Native Guard library not found. Running in Managed-Only mode.")]
+    private partial void LogNativeLibMissing();
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Error, Message = "❌ Failed to execute Native Guard check.")]
+    private partial void LogIntegrityCheckFailed(Exception ex);
 }

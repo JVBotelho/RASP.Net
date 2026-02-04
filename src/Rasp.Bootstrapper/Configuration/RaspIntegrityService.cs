@@ -1,14 +1,13 @@
 ﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Rasp.Bootstrapper.Native;
 
 namespace Rasp.Bootstrapper.Configuration;
 
-public class RaspIntegrityService(ILogger<RaspIntegrityService> logger) : IHostedService
+public class RaspIntegrityService(NativeGuard nativeGuard) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        NativeGuard.AssertIntegrity(logger);
+        nativeGuard.AssertIntegrity();
         return Task.CompletedTask;
     }
 
