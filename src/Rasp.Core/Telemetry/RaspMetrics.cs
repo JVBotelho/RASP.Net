@@ -18,7 +18,9 @@ public sealed class RaspMetrics : IRaspMetrics
 
     public RaspMetrics(IMeterFactory meterFactory)
     {
+#pragma warning disable CA2000
         var meter = meterFactory.Create(MeterName, "1.0.0");
+#pragma warning restore CA2000
 
         _inspectionsCounter = meter.CreateCounter<long>(
             "rasp.inspections.total",

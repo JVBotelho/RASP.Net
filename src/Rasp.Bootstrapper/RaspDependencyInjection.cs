@@ -1,6 +1,7 @@
 ﻿using Grpc.AspNetCore.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Rasp.Bootstrapper.Configuration;
+using Rasp.Bootstrapper.Native;
 using Rasp.Core;
 using Rasp.Instrumentation.Grpc.Interceptors;
 
@@ -29,12 +30,16 @@ public static class RaspDependencyInjection
 
         services.AddRaspCore();
 
+        services.AddSingleton<NativeGuard>();
+
         services.AddSingleton<SecurityInterceptor>();
 
         services.PostConfigure<GrpcServiceOptions>(options =>
         {
             options.Interceptors.Add<SecurityInterceptor>();
         });
+
+        services.AddHostedService<RaspIntegrityService>();
 
         return services;
     }

@@ -1,23 +1,24 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Google.Protobuf;
+using Google.Protobuf.Reflection;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Rasp.Core.Abstractions;
+using Rasp.Core.Models;
 
+[assembly: InternalsVisibleTo("Rasp.Benchmarks")]
 namespace Rasp.Instrumentation.Grpc.Interceptors;
 
 /// <summary>
 /// The main RASP barrier for gRPC services.
 /// Intercepts every unary call, inspects the payload, and decides whether to proceed.
 /// </summary>
-public class SecurityInterceptor : Interceptor
+public class SecurityInterceptor(IDetectionEngine detectionEngine, IRaspMetrics metrics) : Interceptor
 {
-    private readonly IDetectionEngine _detectionEngine;
-    private readonly IRaspMetrics _metrics;
-
-    public SecurityInterceptor(IDetectionEngine detectionEngine, IRaspMetrics metrics)
+    internal DetectionResult InspectInternal(string payload)
     {
-        _detectionEngine = detectionEngine;
-        _metrics = metrics;
+        return detectionEngine.Inspect(payload, "BenchmarkContext");
     }
 
     public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
@@ -25,37 +26,39 @@ public class SecurityInterceptor : Interceptor
         ServerCallContext context,
         UnaryServerMethod<TRequest, TResponse> continuation)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(continuation);
+
         var sw = Stopwatch.StartNew();
-        var method = context.Method; // e.g., "/Library.Library/GetBookById"
+        string method = context.Method;
 
         try
         {
-            // --- 1. INSPECTION PHASE ---
-            // For MVP: Convert request to string (Naive approach - Phase 2 optimization target)
-            // Warning: request.ToString() in Protobuf usually returns the JSON representation.
-            // This allocates memory! We will optimize this with Source Generators later.
-            string payload = request?.ToString() ?? string.Empty;
+            if (request is not IMessage protoMessage) return await continuation(request, context).ConfigureAwait(false);
+            var fields = protoMessage.Descriptor.Fields.InFieldNumberOrder();
 
-            var result = _detectionEngine.Inspect(payload, method);
-
-            if (result.IsThreat)
+            foreach (var field in fields)
             {
-                // --- 2. BLOCKING PHASE ---
-                _metrics.ReportThreat("gRPC", result.ThreatType!, blocked: true);
+                if (field.FieldType != FieldType.String) continue;
+                string? value = field.Accessor.GetValue(protoMessage) as string;
 
-                // Fail Fast with PermissionDenied (or InvalidArgument)
+                if (string.IsNullOrEmpty(value)) continue;
+                var result = detectionEngine.Inspect(value, method);
+
+                if (!result.IsThreat) continue;
+                metrics.ReportThreat("gRPC", result.ThreatType!, blocked: true);
+
                 throw new RpcException(new Status(
                     StatusCode.PermissionDenied,
                     $"RASP Security Alert: {result.Description}"));
             }
 
-            // --- 3. EXECUTION PHASE ---
-            return await continuation(request, context);
+            return await continuation(request, context).ConfigureAwait(false);
         }
         finally
         {
             sw.Stop();
-            _metrics.RecordInspection("gRPC", sw.Elapsed.TotalMilliseconds);
+            metrics.RecordInspection("gRPC", sw.Elapsed.TotalMilliseconds);
         }
     }
 }
