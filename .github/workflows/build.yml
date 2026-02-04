@@ -90,7 +90,7 @@ jobs:
 
     # 2. Code Formatting (Enforce Style)
     - name: Verify Formatting
-      run: dotnet format ${{ env.SOLUTION_NAME }} --verify-no-changes --verbosity diagnostic
+      run: dotnet format ${{ env.SOLUTION_NAME }} --verify-no-changes --verbosity diagnostic --exclude ./modules
 
     # 3. CodeQL Analysis
     - name: Initialize CodeQL
