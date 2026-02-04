@@ -14,13 +14,13 @@ internal static class SqlHeuristics
 
     // High-risk keywords: Structural SQL commands.
     // Detecting these implies a high probability of an injection attempt.
-    private static readonly string[] HighRiskTokens = 
+    private static readonly string[] HighRiskTokens =
     [
-        "union select", 
-        "insert into", 
-        "delete from", 
-        "drop table", 
-        "exec(", 
+        "union select",
+        "insert into",
+        "delete from",
+        "drop table",
+        "exec(",
         "xp_cmdshell",
         "waitfor delay"
     ];
@@ -28,7 +28,7 @@ internal static class SqlHeuristics
     // Contextual patterns: Specific sequences targeting quote breakouts.
     // We prioritize these checks to solve the "O'Reilly" false positive problem:
     // we only flag quotes that are immediately followed by SQL syntax.
-    private static readonly string[] ContextualPatterns = 
+    private static readonly string[] ContextualPatterns =
     [
         "' or",   // Tautology: admin' OR '1'='1
         "' and",  // Tautology: admin' AND 1=1
@@ -59,7 +59,7 @@ internal static class SqlHeuristics
             // For now, linear scanning is acceptable as it remains Zero-Alloc.
             if (normalizedInput.Contains(pattern.AsSpan(), StringComparison.Ordinal))
             {
-                return CriticalThreat; 
+                return CriticalThreat;
             }
         }
 

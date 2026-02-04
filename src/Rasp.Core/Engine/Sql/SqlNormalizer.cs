@@ -25,12 +25,12 @@ public static class SqlNormalizer
         {
             if (written >= maxLen)
             {
-                break; 
+                break;
             }
 
             char c = input[i];
 
-            if (!char.IsAscii(c)) 
+            if (!char.IsAscii(c))
             {
                 output[written++] = c;
                 lastWasSpace = false;
@@ -38,9 +38,9 @@ public static class SqlNormalizer
             }
 
             // --- ASCII LOGIC ---
-            
+
             // Collapse Whitespace (Tab, NewLine, Space)
-            if (c <= ' ') 
+            if (c <= ' ')
             {
                 if (!lastWasSpace)
                 {

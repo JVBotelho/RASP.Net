@@ -33,7 +33,7 @@ public class SecurityInterceptor(IDetectionEngine detectionEngine, IRaspMetrics 
         {
             if (request is not IMessage protoMessage) return await continuation(request, context);
             var fields = protoMessage.Descriptor.Fields.InFieldNumberOrder();
-                
+
             foreach (var field in fields)
             {
                 if (field.FieldType != FieldType.String) continue;

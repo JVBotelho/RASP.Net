@@ -9,7 +9,7 @@ internal static partial class NativeGuard
     private const string DllName = "Rasp.Native.Guard.dll";
 
     [LibraryImport(DllName)]
-    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])] 
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     private static partial int CheckEnvironment();
 
     public static void AssertIntegrity(ILogger logger)
@@ -17,7 +17,7 @@ internal static partial class NativeGuard
         try
         {
             logger.LogInformation("[RASP NATIVE] 🔍 Checking process integrity...");
-            
+
             var status = CheckEnvironment();
 
             if (status != 0)
@@ -32,7 +32,7 @@ internal static partial class NativeGuard
                 logger.LogCritical("[RASP NATIVE] 🚨 Integrity Violation! Threat: {ThreatCode} - {Desc}", status, threat);
                 throw new System.Security.SecurityException($"RASP Integrity Violation: {threat}");
             }
-            
+
             logger.LogInformation("[RASP NATIVE] ✅ Environment Clean. No debuggers detected.");
         }
         catch (DllNotFoundException)

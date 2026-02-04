@@ -17,11 +17,11 @@ namespace Rasp.Core.Engine;
 /// </summary>
 public class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEngine> logger) : IDetectionEngine
 {
-    private static readonly SearchValues<char> DangerousChars = 
+    private static readonly SearchValues<char> DangerousChars =
         SearchValues.Create("'-;/*");
 
-    private const int MaxStackAllocSize = 1024; 
-    private const int MaxAnalysisLength = 4096; 
+    private const int MaxStackAllocSize = 1024;
+    private const int MaxAnalysisLength = 4096;
 
     /// <summary>
     /// Inspects the provided payload for SQL Injection patterns.
@@ -49,7 +49,7 @@ public class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEngine> lo
     /// </remarks>
     public DetectionResult Inspect(string? payload, string context = "Unknown")
     {
-        if (string.IsNullOrEmpty(payload)) 
+        if (string.IsNullOrEmpty(payload))
             return DetectionResult.Safe();
 
         var inputSpan = payload.AsSpan();
@@ -80,7 +80,7 @@ public class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEngine> lo
 
             if (!(score >= 1.0)) return DetectionResult.Safe();
             logger.LogWarning("⚔️ RASP Blocked SQLi! Score: {Score} Context: {Context}", score, context);
-                
+
             // FIX 2: Usando o Factory Method estático que resolve os erros de inicialização
             return DetectionResult.Threat(
                 threatType: "SQL Injection",

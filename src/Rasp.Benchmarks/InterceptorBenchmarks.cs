@@ -35,11 +35,11 @@ public class FakeServerCallContext : ServerCallContext
     protected override Status StatusCore { get; set; }
     protected override WriteOptions? WriteOptionsCore { get; set; }
     protected override AuthContext AuthContextCore => new AuthContext(string.Empty, new Dictionary<string, List<AuthProperty>>());
-    
-    protected override ContextPropagationToken CreatePropagationTokenCore(ContextPropagationOptions? options) 
+
+    protected override ContextPropagationToken CreatePropagationTokenCore(ContextPropagationOptions? options)
         => throw new NotImplementedException();
-        
-    protected override Task WriteResponseHeadersAsyncCore(Metadata responseHeaders) 
+
+    protected override Task WriteResponseHeadersAsyncCore(Metadata responseHeaders)
         => Task.CompletedTask;
 }
 
@@ -51,13 +51,13 @@ public class InterceptorBenchmarks
     private SecurityInterceptor _realInterceptor = null!;
     private SecurityInterceptor _baselineInterceptor = null!;
     private readonly FakeServerCallContext _context = new();
-    
+
     private CreateBookRequest _safeRequest = null!;
     private CreateBookRequest _attackRequest = null!;
 
     private UnaryServerMethod<CreateBookRequest, BookResponse> _continuationDelegate = null!;
 
-    [Params(100, 1000, 10000, 100000)] 
+    [Params(100, 1000, 10000, 100000)]
     public int PayloadSize { get; set; }
 
     [GlobalSetup]
@@ -65,26 +65,26 @@ public class InterceptorBenchmarks
     {
         var sqlEngine = new SqlInjectionDetectionEngine(NullLogger<SqlInjectionDetectionEngine>.Instance);
         var metrics = new NoOpMetrics();
-        
-        sqlEngine.Inspect("warmup ' OR 1=1"); 
+
+        sqlEngine.Inspect("warmup ' OR 1=1");
 
         _realInterceptor = new SecurityInterceptor(sqlEngine, metrics);
         _baselineInterceptor = new SecurityInterceptor(new NoOpDetectionEngine(), metrics);
 
         var longString = new string('a', PayloadSize);
 
-        _safeRequest = new CreateBookRequest 
-        { 
-            Title = "Clean Code: " + longString, 
+        _safeRequest = new CreateBookRequest
+        {
+            Title = "Clean Code: " + longString,
             Author = "Robert C. Martin",
             PublicationYear = 2008,
             Pages = 464,
             TotalCopies = 10
         };
 
-        _attackRequest = new CreateBookRequest 
-        { 
-            Title = "Exploit", 
+        _attackRequest = new CreateBookRequest
+        {
+            Title = "Exploit",
             Author = longString + "' UNION SELECT 1, @@version -- ",
             PublicationYear = 2025,
             Pages = 1,
@@ -99,8 +99,8 @@ public class InterceptorBenchmarks
     public async Task<BookResponse> Baseline_NoOp()
     {
         return await _baselineInterceptor.UnaryServerHandler(
-            _safeRequest, 
-            _context, 
+            _safeRequest,
+            _context,
             _continuationDelegate);
     }
 
@@ -109,8 +109,8 @@ public class InterceptorBenchmarks
     public async Task<BookResponse> RASP_Safe_Traffic()
     {
         return await _realInterceptor.UnaryServerHandler(
-            _safeRequest, 
-            _context, 
+            _safeRequest,
+            _context,
             _continuationDelegate);
     }
 
@@ -121,8 +121,8 @@ public class InterceptorBenchmarks
         try
         {
             await _realInterceptor.UnaryServerHandler(
-                _attackRequest, 
-                _context, 
+                _attackRequest,
+                _context,
                 _continuationDelegate);
         }
         catch (RpcException)
