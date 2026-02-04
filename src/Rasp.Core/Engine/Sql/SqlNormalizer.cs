@@ -1,54 +1,69 @@
-﻿using System;
-using System.Buffers;
+﻿using System.Runtime.CompilerServices;
 
 namespace Rasp.Core.Engine.Sql;
 
-internal static class SqlNormalizer
+public static class SqlNormalizer
 {
-    // Define o que é "espaço em branco" para nós (Tab, CR, LF, etc)
-    private static readonly SearchValues<char> WhitespaceChars = 
-        SearchValues.Create(" \t\n\r\f\v");
-
     /// <summary>
-    /// Normaliza o input para um buffer de saída (Stack).
-    /// ToLower + Whitespace collapse em uma única passada.
+    /// Normalizes SQL input for inspection:
+    /// 1. Converts ASCII 'A'-'Z' to 'a'-'z' (Zero-Alloc Bitwise).
+    /// 2. Preserves Unicode characters (> 127) intact (no data corruption).
+    /// 3. Collapses multiple spaces into a single space.
+    /// 4. Stops processing if the output buffer is full.
     /// </summary>
+    /// <param name="input">The raw SQL payload.</param>
+    /// <param name="output">The buffer to write normalized characters to.</param>
+    /// <returns>The number of characters written to the output.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int Normalize(ReadOnlySpan<char> input, Span<char> output)
     {
-        int outIdx = 0;
+        int written = 0;
+        int maxLen = output.Length;
         bool lastWasSpace = false;
 
         for (int i = 0; i < input.Length; i++)
         {
-            // Proteção contra buffer overflow (caso edge case)
-            if (outIdx >= output.Length) break;
+            if (written >= maxLen)
+            {
+                break; 
+            }
 
             char c = input[i];
 
-            // 1. Tratamento de Espaços
-            // Se for um char de espaço (tab, enter), normaliza para ' '
-            if (WhitespaceChars.Contains(c))
+            if (!char.IsAscii(c)) 
+            {
+                output[written++] = c;
+                lastWasSpace = false;
+                continue;
+            }
+
+            // --- ASCII LOGIC ---
+            
+            // Collapse Whitespace (Tab, NewLine, Space)
+            if (c <= ' ') 
             {
                 if (!lastWasSpace)
                 {
-                    output[outIdx++] = ' ';
+                    output[written++] = ' ';
                     lastWasSpace = true;
                 }
                 continue;
             }
 
-            // 2. ToLower (Otimizado para ASCII)
-            // 'A' (65) até 'Z' (90). Adiciona 32 para virar minúscula.
-            // Para unicode complexo, isso falha, mas para SQLi keywords (inglês) é perfeito e rápido.
-            if (c >= 'A' && c <= 'Z')
-            {
-                c = (char)(c | 0x20); // Bitwise hack para lowercase
-            }
-
-            output[outIdx++] = c;
             lastWasSpace = false;
+
+            // Bitwise ToLower for A-Z only
+            // (uint)(c - 'A') <= ('Z' - 'A') is an unsigned trick to check range in one op
+            if ((uint)(c - 'A') <= ('Z' - 'A'))
+            {
+                output[written++] = (char)(c | 0x20);
+            }
+            else
+            {
+                output[written++] = c;
+            }
         }
 
-        return outIdx; // Retorna quantos caracteres foram escritos
+        return written;
     }
 }
