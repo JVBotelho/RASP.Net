@@ -1,4 +1,5 @@
-﻿using Rasp.Core.Models;
+﻿using Rasp.Core.Enums;
+using Rasp.Core.Models;
 
 namespace Rasp.Core.Abstractions;
 
@@ -17,4 +18,9 @@ public interface IDetectionEngine
     /// <param name="context">Optional context about the source (e.g., "gRPC.BookService/CreateBook").</param>
     /// <returns>A <see cref="DetectionResult"/> indicating the verdict.</returns>
     DetectionResult Inspect(string? payload, string context = "Unknown");
+
+    /// <summary>
+    /// Inspects a payload using zero-allocation Span and typed Context (Elite Hot Path).
+    /// </summary>
+    DetectionResult Inspect(ReadOnlySpan<char> payload, string context = "Unknown");
 }

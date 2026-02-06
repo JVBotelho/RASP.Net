@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>1.0.5-elite</Version>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <NoWarn>$(NoWarn);NU5128;NU5118</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,5 +17,31 @@
   <ItemGroup>
     <ProjectReference Include="..\Rasp.Core\Rasp.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false">
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <UndefineProperties>TargetFramework</UndefineProperties>
+    </ProjectReference>
+  </ItemGroup>
+
+  <!-- Include source generator in NuGet package -->
+  <Target Name="PackSourceGenerator" BeforeTargets="GenerateNuspec">
+    <MSBuild Projects="..\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj"
+             Targets="Build;GetTargetPath"
+             Properties="TargetFramework=netstandard2.0"
+    >
+      <Output TaskParameter="TargetOutputs" ItemName="RaspGeneratorAssembly" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_PackageFiles Include="@(RaspGeneratorAssembly)"
+                     PackagePath="analyzers/dotnet/cs/%(Filename)%(Extension)"
+                     Pack="true"
+                     Visible="false" />
+    </ItemGroup>
+  </Target>
 
 </Project>
