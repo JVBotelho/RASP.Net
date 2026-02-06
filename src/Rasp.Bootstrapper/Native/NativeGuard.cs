@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
 namespace Rasp.Bootstrapper.Native;

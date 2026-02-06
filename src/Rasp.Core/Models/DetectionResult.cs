@@ -4,7 +4,6 @@ namespace Rasp.Core.Models;
 
 public sealed record DetectionResult
 {
-    // OTIMIZAÇÃO: Cache da instância "Safe" para evitar alocação no hot path (99% das requisições).
     private static readonly DetectionResult _safeInstance = new() { IsThreat = false };
 
     /// <summary>
@@ -54,12 +53,12 @@ public sealed record DetectionResult
         ThreatSeverity severity = ThreatSeverity.High,
         double confidence = 1.0,
         string? matchedPattern = null) => new()
-        {
-            IsThreat = true,
-            ThreatType = threatType,
-            Description = description,
-            Severity = severity,
-            Confidence = confidence,
-            MatchedPattern = matchedPattern
-        };
+    {
+        IsThreat = true,
+        ThreatType = threatType,
+        Description = description,
+        Severity = severity,
+        Confidence = confidence,
+        MatchedPattern = matchedPattern
+    };
 }
