@@ -11,15 +11,13 @@ namespace Rasp.Core.Infrastructure;
 /// </summary>
 public class RaspAlertBus
 {
-    // Bounded Channel for Backpressure
     private readonly Channel<RaspAlert> _channel = Channel.CreateBounded<RaspAlert>(new BoundedChannelOptions(5000)
     {
         FullMode = BoundedChannelFullMode.DropOldest,
         SingleReader = true,
         SingleWriter = false
     });
-    
-    // Simple Object Pool
+
     private readonly ConcurrentQueue<RaspAlert> _pool = new();
     private const int MaxPoolSize = 1000;
 
@@ -41,7 +39,6 @@ public class RaspAlertBus
 
         if (!_channel.Writer.TryWrite(alert))
         {
-            // Se o canal estiver cheio, devolvemos ao pool.
             ReturnToPool(alert);
         }
     }

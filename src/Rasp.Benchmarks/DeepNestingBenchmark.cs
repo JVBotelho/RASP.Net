@@ -16,14 +16,14 @@ public class DeepNestingBenchmark : IDisposable
 {
     private DeepTargetServiceRaspInterceptor _sourceGenInterceptor = null!;
     private SecurityInterceptor _reflectionInterceptor = null!;
-    
+
     // Payloads
     private DeepRequest _cleanRequest = null!;
     private DeepRequest _infectedRequest = null!;
-    
+
     private readonly FakeServerCallContext _context = new("/Library/DeepOperation");
     private readonly Task<BookResponse> _cachedResponse = Task.FromResult(new BookResponse());
-    
+
     private RaspAlertBus _alertBus = null!;
     private CancellationTokenSource _cts = null!;
     private Task _consumerTask = null!;
@@ -37,15 +37,15 @@ public class DeepNestingBenchmark : IDisposable
         var xssEngine = new XssDetectionEngine();
         _alertBus = new RaspAlertBus();
         _cts = new CancellationTokenSource();
-        
+
         for (int i = 0; i < 100; i++)
         {
             _alertBus.PushAlert("Test", "Payload", "Context");
         }
-        
-        _consumerTask = Task.Run(async () => 
+
+        _consumerTask = Task.Run(async () =>
         {
-            try 
+            try
             {
                 await foreach (var _ in _alertBus.ReadAlertsAsync(_cts.Token).ConfigureAwait(false))
                 {
@@ -54,7 +54,7 @@ public class DeepNestingBenchmark : IDisposable
             }
             catch (OperationCanceledException) { }
         });
-        
+
         // 2. Interceptors
         _sourceGenInterceptor = new DeepTargetServiceRaspInterceptor(xssEngine, sqlEngine, _alertBus);
 
@@ -69,7 +69,7 @@ public class DeepNestingBenchmark : IDisposable
         // 4. INFECTED REQUEST (15 Níveis, Payload XSS no Nível 7)
         _infectedRequest = BuildChain(15, safe: false);
     }
-    
+
     [GlobalCleanup]
     public void Cleanup()
     {
@@ -91,13 +91,13 @@ public class DeepNestingBenchmark : IDisposable
             if (_cts != null)
             {
                 _cts.Cancel();
-                try 
-                { 
+                try
+                {
                     // Aguarda brevemente o consumidor terminar
-                    _consumerTask?.Wait(500); 
-                } 
-                catch(OperationCanceledException)
-                { 
+                    _consumerTask?.Wait(500);
+                }
+                catch (OperationCanceledException)
+                {
                     // Ignora erros de cancelamento/timeout no cleanup
                 }
                 _cts.Dispose();
@@ -111,12 +111,12 @@ public class DeepNestingBenchmark : IDisposable
     {
         var root = new DeepRequest { Value = "Safe Root" };
         var current = root;
-        
-        for(int i=0; i<depth; i++)
+
+        for (int i = 0; i < depth; i++)
         {
-            current.Next = new DeepRequest(); 
+            current.Next = new DeepRequest();
             current = current.Next;
-            
+
             // INJECTION POINT: No meio do caminho (Nível 7)
             if (!safe && i == 14)
             {
@@ -185,7 +185,7 @@ public class DeepNestingBenchmark : IDisposable
 
 public partial class DeepTargetService : Library.LibraryBase
 {
-    public override Task<BookResponse> DeepOperation(DeepRequest request, ServerCallContext context) 
+    public override Task<BookResponse> DeepOperation(DeepRequest request, ServerCallContext context)
         => Task.FromResult(new BookResponse());
 }
 
@@ -202,7 +202,7 @@ public class FakeServerCallContext : ServerCallContext
     protected override Metadata ResponseTrailersCore => Metadata.Empty;
     protected override Status StatusCore { get; set; }
     protected override WriteOptions? WriteOptionsCore { get; set; }
-    protected override AuthContext AuthContextCore => null!; 
+    protected override AuthContext AuthContextCore => null!;
     protected override ContextPropagationToken CreatePropagationTokenCore(ContextPropagationOptions? options) => throw new NotImplementedException();
     protected override Task WriteResponseHeadersAsyncCore(Metadata responseHeaders) => Task.CompletedTask;
 }

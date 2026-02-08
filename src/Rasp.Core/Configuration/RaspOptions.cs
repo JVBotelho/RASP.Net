@@ -7,7 +7,7 @@
 public class RaspOptions
 {
     public const string SectionName = "Rasp";
-    
+
     /// <summary>
     /// If true, blocks detected attacks and throws an exception.
     /// If false, only logs/monitors ("Audit" Mode).
@@ -19,7 +19,7 @@ public class RaspOptions
     /// If true, enables detailed telemetry (may have performance impact).
     /// </summary>
     public bool EnableMetrics { get; set; } = true;
-    
+
     /// <summary>
     /// Global budget for gRPC payload inspection in Characters (UTF-16).
     /// <para>
@@ -44,4 +44,25 @@ public class RaspOptions
     /// <para>Default: true (Block)</para>
     /// </summary>
     public bool BlockOnBudgetExhaustion { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Content Security Policy (CSP) should operate in "Report-Only" mode.
+    /// <para>
+    /// When <c>true</c>, policy violations are reported but not blocked. This is recommended for 
+    /// initial production deployments ("Learning Mode") to avoid breaking legitimate scripts.
+    /// </para>
+    /// <value>Default is <c>true</c>.</value>
+    /// </summary>
+    public bool CspReportOnly { get; set; } = true;
+
+#pragma warning disable CA1056
+    /// <summary>
+    /// Gets or sets the endpoint URI where CSP violation reports will be sent by the browser.
+    /// <para>
+    /// This value is injected into the <c>report-uri</c> directive of the CSP header.
+    /// Can be a relative path (e.g., <c>/api/csp-report</c>) or an absolute URL.
+    /// </para>
+    /// </summary>
+    public string? CspReportUri { get; set; }
+#pragma warning restore CA1056
 }

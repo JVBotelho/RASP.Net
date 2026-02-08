@@ -21,7 +21,7 @@ public class RecursiveReflectionInspector : IGrpcMessageInspector
         if (obj == null || depth > 15) return DetectionResult.Safe();
 
         var type = obj.GetType();
-        
+
         // Pega do cache ou reflete
         var props = _cache.GetOrAdd(type, t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance));
 

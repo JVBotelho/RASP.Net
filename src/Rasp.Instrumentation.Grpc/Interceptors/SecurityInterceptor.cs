@@ -36,9 +36,9 @@ public partial class SecurityInterceptor(
         ArgumentNullException.ThrowIfNull(continuation);
 
         InspectMessage(request as IMessage, "Incoming Request", context.Method);
-        
+
         var response = await continuation(request, context).ConfigureAwait(false);
-        
+
         InspectMessage(response as IMessage, "Outgoing Response", context.Method);
 
         return response;
@@ -53,7 +53,7 @@ public partial class SecurityInterceptor(
         if (!result.IsThreat) return;
         ArgumentNullException.ThrowIfNull(result.ThreatType);
         ArgumentNullException.ThrowIfNull(result.Description);
-            
+
         LogRaspBlockedFlowOnMethodTypeThreattypeReasonReason(logger, flowContext, method, result.ThreatType, result.Description);
 
         throw new RpcException(new Status(StatusCode.InvalidArgument, $"Security Violation: {result.Description}"));

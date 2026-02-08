@@ -31,6 +31,6 @@ public interface IGrpcMessageInspector
 /// </summary>
 public class NoOpGrpcInspector : IGrpcMessageInspector
 {
-    public DetectionResult Inspect(IMessage message, IDetectionEngine engine, int maxScanChars) 
+    public DetectionResult Inspect(IMessage message, IDetectionEngine engine, int maxScanChars)
         => DetectionResult.Safe();
 }

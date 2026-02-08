@@ -81,7 +81,7 @@ public partial class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEn
             double score = SqlHeuristics.CalculateScore(searchSpace);
 
             if (!(score >= 1.0)) return DetectionResult.Safe();
-            
+
             LogBlockedSqlInjection(logger, score, context);
 
             return DetectionResult.Threat(

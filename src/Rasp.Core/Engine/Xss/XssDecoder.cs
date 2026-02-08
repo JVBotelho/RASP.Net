@@ -1,244 +1,200 @@
-﻿using System.Buffers;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+// ReSharper disable MergeIntoPattern
 
 namespace Rasp.Core.Engine.Xss;
 
 /// <summary>
-/// Elite Zero-Allocation Decoder.
-/// Handles: HTML Entities, URL Encoding, JS Unicode/Hex Escapes.
-/// Implements Recursive Canonicalization (Anti-Evasion).
+/// Uses AggressiveInlining to ensure JIT merges this into the Hot Path.
 /// </summary>
 internal static class XssDecoder
 {
-    private const int MaxRecursionDepth = 5; // Evita DoS por loops de encoding
-    private const int MaxEntityLength = 32;
-
-    // Gatilhos para decodificação: &, %, \
-    private static readonly SearchValues<char> EncodedTriggers = 
-        SearchValues.Create("&%\\");
-
-    /// <summary>
-    /// Canonicalizes the input by recursively decoding layers of obfuscation.
-    /// Ex: "%253Cscript" -> "%3Cscript" -> "<script"
-    /// </summary>
-    public static int Canonicalize(ReadOnlySpan<char> input, Span<char> output)
-    {
-        // 1. Cópia inicial para o buffer de trabalho
-        if (input.Length > output.Length) return 0; // Buffer overflow protection
-        input.CopyTo(output);
-        int currentLength = input.Length;
-
-        // 2. Loop de Decodificação Recursiva (Peeling the Onion)
-        for (int depth = 0; depth < MaxRecursionDepth; depth++)
-        {
-            var currentSpan = output.Slice(0, currentLength);
-            
-            // Fast Check: Se não tem caracteres codificados, paramos.
-            if (!currentSpan.ContainsAny(EncodedTriggers))
-            {
-                break;
-            }
-
-            // Realiza uma passada de decodificação
-            bool changed = false;
-            int newLength = DecodePass(currentSpan, output, out changed);
-            
-            if (!changed || newLength == currentLength) break; // Estabilizou
-            
-            currentLength = newLength;
-        }
-
-        return currentLength;
-    }
-
-    // Realiza uma passada de decodificação unificada (URL + HTML + JS Escapes)
-    private static int DecodePass(ReadOnlySpan<char> input, Span<char> output, out bool changed)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int PerformUnsafeDecodePass(Span<char> span, out bool changed)
     {
         int read = 0;
         int write = 0;
+        int len = span.Length;
         changed = false;
-        int len = input.Length;
 
-        // Buffer temporário na stack para evitar corrupção (in-place decode é arriscado sem shift correto)
-        // Limitamos stackalloc para segurança. Se for maior, não decodifica recursivamente (fallback seguro).
-        if (len > 4096) 
-        {
-            input.CopyTo(output);
-            return len;
-        }
+        int complexityBudget = 200;
 
-        Span<char> temp = stackalloc char[len];
+        ref char ptr = ref MemoryMarshal.GetReference(span);
 
         while (read < len)
         {
-            char c = input[read];
+            char c = Unsafe.Add(ref ptr, read);
 
-            // 1. URL Decode (%XX)
             if (c == '%' && read + 2 < len)
             {
-                if (TryDecodeHex(input.Slice(read + 1, 2), out char decodedChar))
+                if (complexityBudget > 0 && TryFastHexDecode(Unsafe.Add(ref ptr, read + 1), Unsafe.Add(ref ptr, read + 2), out char decoded))
                 {
-                    temp[write++] = decodedChar;
+                    Unsafe.Add(ref ptr, write++) = decoded;
                     read += 3;
                     changed = true;
+                    complexityBudget--;
                     continue;
                 }
             }
-
-            // 2. JS Escapes (\uXXXX or \xXX)
-            if (c == '\\')
+            else if (c == '\\')
             {
-                // \uXXXX
-                if (read + 5 < len && input[read + 1] == 'u')
+                if (complexityBudget > 0)
                 {
-                    if (TryDecodeHex(input.Slice(read + 2, 4), out char decodedChar))
+                    if (read + 5 < len && Unsafe.Add(ref ptr, read + 1) == 'u')
                     {
-                        temp[write++] = decodedChar;
-                        read += 6;
-                        changed = true;
-                        continue;
+                        if (TryFastHexDecode4(
+                            Unsafe.Add(ref ptr, read + 2), Unsafe.Add(ref ptr, read + 3),
+                            Unsafe.Add(ref ptr, read + 4), Unsafe.Add(ref ptr, read + 5),
+                            out char decoded))
+                        {
+                            Unsafe.Add(ref ptr, write++) = decoded;
+                            read += 6;
+                            changed = true;
+                            complexityBudget--;
+                            continue;
+                        }
+                    }
+                    else if (read + 3 < len && Unsafe.Add(ref ptr, read + 1) == 'x')
+                    {
+                        if (TryFastHexDecode(Unsafe.Add(ref ptr, read + 2), Unsafe.Add(ref ptr, read + 3), out char decoded))
+                        {
+                            Unsafe.Add(ref ptr, write++) = decoded;
+                            read += 4;
+                            changed = true;
+                            complexityBudget--;
+                            continue;
+                        }
                     }
                 }
-                // \xXX
-                else if (read + 3 < len && input[read + 1] == 'x')
+            }
+            else if (c == '&')
+            {
+                int remaining = len - read;
+                if (complexityBudget > 0 && remaining > 3)
                 {
-                    if (TryDecodeHex(input.Slice(read + 2, 2), out char decodedChar))
+                    if (Unsafe.Add(ref ptr, read + 1) == 'l' && Unsafe.Add(ref ptr, read + 2) == 't' && Unsafe.Add(ref ptr, read + 3) == ';')
                     {
-                        temp[write++] = decodedChar;
-                        read += 4;
-                        changed = true;
-                        continue;
+                        Unsafe.Add(ref ptr, write++) = '<'; read += 4; changed = true; complexityBudget--; continue;
+                    }
+                    if (Unsafe.Add(ref ptr, read + 1) == 'g' && Unsafe.Add(ref ptr, read + 2) == 't' && Unsafe.Add(ref ptr, read + 3) == ';')
+                    {
+                        Unsafe.Add(ref ptr, write++) = '>'; read += 4; changed = true; complexityBudget--; continue;
+                    }
+                    if (Unsafe.Add(ref ptr, read + 1) == '#')
+                    {
+                        bool isHex = (remaining > 4 && (Unsafe.Add(ref ptr, read + 2) == 'x' || Unsafe.Add(ref ptr, read + 2) == 'X'));
+                        int startDigit = isHex ? 3 : 2;
+
+                        if (TryDecodeNumericEntity(ref ptr, read, remaining, startDigit, isHex, out char entityChar, out int consumed))
+                        {
+                            Unsafe.Add(ref ptr, write++) = entityChar;
+                            read += consumed;
+                            changed = true;
+                            complexityBudget--;
+                            continue;
+                        }
+                    }
+                    if (remaining > 4)
+                    {
+                        if (Unsafe.Add(ref ptr, read + 1) == 'a' && Unsafe.Add(ref ptr, read + 2) == 'm' && Unsafe.Add(ref ptr, read + 3) == 'p' && Unsafe.Add(ref ptr, read + 4) == ';')
+                        {
+                            Unsafe.Add(ref ptr, write++) = '&'; read += 5; changed = true; complexityBudget--; continue;
+                        }
+                    }
+                    if (remaining > 5)
+                    {
+                        char n1 = Unsafe.Add(ref ptr, read + 1);
+                        if (n1 == 'q' && Unsafe.Add(ref ptr, read + 2) == 'u' && Unsafe.Add(ref ptr, read + 3) == 'o' && Unsafe.Add(ref ptr, read + 4) == 't' && Unsafe.Add(ref ptr, read + 5) == ';')
+                        {
+                            Unsafe.Add(ref ptr, write++) = '"'; read += 6; changed = true; complexityBudget--; continue;
+                        }
+                        if (n1 == 'a' && Unsafe.Add(ref ptr, read + 2) == 'p' && Unsafe.Add(ref ptr, read + 3) == 'o' && Unsafe.Add(ref ptr, read + 4) == 's' && Unsafe.Add(ref ptr, read + 5) == ';')
+                        {
+                            Unsafe.Add(ref ptr, write++) = '\''; read += 6; changed = true; complexityBudget--; continue;
+                        }
                     }
                 }
             }
 
-            // 3. HTML Entities (&lt;)
-            if (c == '&')
-            {
-                int end = FindEntityEnd(input, read);
-                if (end != -1)
-                {
-                    var entity = input.Slice(read + 1, end - read - 1); // Remove & e ;
-                    char entityChar = DecodeEntity(entity);
-
-                    if (entityChar != '\0')
-                    {
-                        temp[write++] = entityChar;
-                        read = end + 1;
-                        changed = true;
-                        continue;
-                    }
-                }
-            }
-
-            // Char normal
-            temp[write++] = input[read++];
+            Unsafe.Add(ref ptr, write++) = c;
+            read++;
         }
-
-        // Copia de volta para o output buffer
-        temp.Slice(0, write).CopyTo(output);
         return write;
     }
 
-    private static int FindEntityEnd(ReadOnlySpan<char> input, int start)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryDecodeNumericEntity(ref char basePtr, int currentRead, int maxLen, int offset, bool isHex, out char result, out int consumed)
     {
-        int max = Math.Min(start + MaxEntityLength, input.Length);
-        for (int i = start + 1; i < max; i++)
+        result = '\0';
+        consumed = 0;
+        int val = 0;
+        int i = offset;
+
+        int maxLoop = Math.Min(maxLen, 10);
+
+        for (; i < maxLoop; i++)
         {
-            char c = input[i];
-            if (c == ';') return i;
-            if (c == '&' || char.IsWhiteSpace(c)) return -1;
+            char d = Unsafe.Add(ref basePtr, currentRead + i);
+            if (d == ';')
+            {
+                if (i == offset || val == 0) return false;
+                result = (char)val;
+                consumed = i + 1;
+                return true;
+            }
+
+            int digit = -1;
+            if (d >= '0' && d <= '9') digit = d - '0';
+            else if (isHex)
+            {
+                digit = d switch
+                {
+                    >= 'a' and <= 'f' => d - 'a' + 10,
+                    >= 'A' and <= 'F' => d - 'A' + 10,
+                    _ => digit
+                };
+            }
+
+            if (digit == -1) return false;
+
+            if (isHex) val = (val << 4) | digit;
+            else val = val * 10 + digit;
+
+            if (val > 0xFFFF) return false;
         }
-        return -1;
-    }
-
-    private static char DecodeEntity(ReadOnlySpan<char> entity)
-    {
-        if (entity.IsEmpty) return '\0';
-
-        if (entity[0] != '#') return DecodeNamedEntity(entity);
-        var num = entity.Slice(1); // Remove #
-        if (num.IsEmpty) return '\0';
-
-        bool isHex = num.Length > 1 && (num[0] == 'x' || num[0] == 'X');
-        return isHex ? ParseHex(num.Slice(1)) : ParseDecimal(num);
+        return false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool TryDecodeHex(ReadOnlySpan<char> hex, out char result)
+    private static bool TryFastHexDecode(char h1, char h2, out char result)
     {
-        result = '\0';
-        int val = 0;
-        foreach (char c in hex)
-        {
-            int digit = -1;
-            if (c >= '0' && c <= '9') digit = c - '0';
-            else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
-            else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
-            
-            if (digit == -1) return false;
-
-            val = (val << 4) | digit;
-        }
-        result = (char)val;
+        int v1 = GetHexVal(h1);
+        int v2 = GetHexVal(h2);
+        if ((v1 | v2) < 0) { result = '\0'; return false; }
+        result = (char)((v1 << 4) | v2);
         return true;
     }
 
-    private static char ParseDecimal(ReadOnlySpan<char> num)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryFastHexDecode4(char h1, char h2, char h3, char h4, out char result)
     {
-        int result = 0;
-        foreach (char c in num)
-        {
-            if (c is < '0' or > '9') return '\0';
-            
-            // FIX: Overflow check ANTES da operação
-            if (result > 6553) return '\0'; // 65535 / 10 ≈ 6553
-
-            result = result * 10 + (c - '0');
-            
-            if (result > 0xFFFF) return '\0';
-        }
-        return (char)result;
+        int v1 = GetHexVal(h1); int v2 = GetHexVal(h2);
+        int v3 = GetHexVal(h3); int v4 = GetHexVal(h4);
+        if ((v1 | v2 | v3 | v4) < 0) { result = '\0'; return false; }
+        result = (char)((v1 << 12) | (v2 << 8) | (v3 << 4) | v4);
+        return true;
     }
 
-    private static char ParseHex(ReadOnlySpan<char> num)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int GetHexVal(char c)
     {
-        int result = 0;
-        foreach (char c in num)
+        int val = c;
+        return val switch
         {
-            int val = c switch
-            {
-                >= '0' and <= '9' => c - '0',
-                >= 'a' and <= 'f' => c - 'a' + 10,
-                >= 'A' and <= 'F' => c - 'A' + 10,
-                _ => -1
-            };
-            if (val == -1) return '\0';
-
-            // FIX: Overflow check ANTES da operação
-            if (result > 4095) return '\0'; // 0xFFFF / 16 = 4095
-
-            result = result * 16 + val;
-            
-            if (result > 0xFFFF) return '\0';
-        }
-        return (char)result;
-    }
-
-    private static char DecodeNamedEntity(ReadOnlySpan<char> name)
-    {
-        // Switch expression com hash otimizado pelo compilador
-        return name switch
-        {
-            "lt" => '<',
-            "gt" => '>',
-            "amp" => '&',
-            "quot" => '"',
-            "apos" => '\'',
-            "tab" => '\t',
-            "newline" => '\n',
-            "colon" => ':',
-            _ => '\0'
+            >= '0' and <= '9' => val - '0',
+            >= 'A' and <= 'F' => val - ('A' - 10),
+            >= 'a' and <= 'f' => val - ('a' - 10),
+            _ => -1
         };
     }
 }
