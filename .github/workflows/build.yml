@@ -7,18 +7,24 @@ on:
     branches: [ develop, main, master ]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   DOTNET_VERSION: '10.0.x'
   SOLUTION_NAME: 'Rasp.sln' 
+  BUILD_CONFIG_REL: 'Release'
+  BUILD_CONFIG_DBG: 'Debug'
 
 jobs:
   build-and-test:
-    name: Build (${{ matrix.os }})
+    name: Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-      fail-fast: false
+      fail-fast: true
 
     steps:
     - name: Checkout repository
@@ -32,16 +38,19 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         dotnet-quality: 'preview'
         cache: true
-        cache-dependency-path: '**/packages.lock.json'
+        cache-dependency-path: |
+          **/*.csproj
+          **/*.props
+          **/*.targets
 
     - name: Restore dependencies
       run: dotnet restore ${{ env.SOLUTION_NAME }}
 
     - name: Build (Release)
-      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration Release --no-restore
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-restore
 
     - name: Run Tests
-      run: dotnet test ${{ env.SOLUTION_NAME }} --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx"
+      run: dotnet test ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx" --blame-hang-timeout 5m
 
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
@@ -69,37 +78,42 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         dotnet-quality: 'preview'
+        cache: true
+        cache-dependency-path: |
+          **/*.csproj
+          **/*.props
 
     - name: Restore
       run: dotnet restore ${{ env.SOLUTION_NAME }}
 
-    # 1. Check for Vulnerable Packages (Fail on Critical/High)
     - name: NuGet Vulnerability Scan
       run: |
         dotnet list ${{ env.SOLUTION_NAME }} package --vulnerable --include-transitive --framework net10.0 > vulnerabilities.txt
         cat vulnerabilities.txt
-        if grep -q "Critical" vulnerabilities.txt; then
-          echo "::error::Critical vulnerabilities found in dependencies!"
+        
+        # Lógica melhorada para detetar Critical (case insensitive)
+        if grep -i "Critical" vulnerabilities.txt; then
+          echo "::error title=Security Audit::Critical vulnerabilities found in dependencies!"
           exit 1
         fi
-        if grep -q "High" vulnerabilities.txt; then
-          echo "::warning::High vulnerabilities found. Consider updating."
-          # Descomente para quebrar em High também
-          # exit 1
+        
+        if grep -i "High" vulnerabilities.txt; then
+          echo "::warning title=Security Audit::High vulnerabilities found. Consider updating."
         fi
 
-    # 2. Code Formatting (Enforce Style)
-    - name: Verify Formatting
-      run: dotnet format ${{ env.SOLUTION_NAME }} --verify-no-changes --verbosity diagnostic --exclude ./modules
+    - name: Build for Generators
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_DBG }} --no-restore
 
-    # 3. CodeQL Analysis
+    - name: Verify Formatting
+      run: dotnet format ${{ env.SOLUTION_NAME }} --verify-no-changes --verbosity diagnostic --exclude ./modules --no-restore
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: csharp
 
     - name: Build for CodeQL
-      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration Release /p:UseSharedCompilation=false
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-restore /p:UseSharedCompilation=false
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
