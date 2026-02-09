@@ -1,25 +1,31 @@
-﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using Google.Protobuf;
-using Google.Protobuf.Reflection;
+﻿using System;
+using System.Threading.Tasks;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Rasp.Core.Configuration;
 using Rasp.Core.Abstractions;
-using Rasp.Core.Models;
+using Google.Protobuf;
 
-[assembly: InternalsVisibleTo("Rasp.Benchmarks")]
 namespace Rasp.Instrumentation.Grpc.Interceptors;
 
 /// <summary>
-/// The main RASP barrier for gRPC services.
-/// Intercepts every unary call, inspects the payload, and decides whether to proceed.
+/// The Runtime Gatekeeper for gRPC traffic.
+/// <para>
+/// Refactored to depend only on Core abstractions and Options, 
+/// strictly following Dependency Inversion Principle.
+/// </para>
 /// </summary>
-public class SecurityInterceptor(IDetectionEngine detectionEngine, IRaspMetrics metrics) : Interceptor
+public partial class SecurityInterceptor(
+    IDetectionEngine engine,
+    IGrpcMessageInspector inspector,
+    IOptions<RaspOptions> options,
+    ILogger<SecurityInterceptor> logger)
+    : Interceptor
 {
-    internal DetectionResult InspectInternal(string payload)
-    {
-        return detectionEngine.Inspect(payload, "BenchmarkContext");
-    }
+    private readonly int _maxScanChars = options.Value.MaxGrpcScanChars;
+
 
     public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
         TRequest request,
@@ -29,36 +35,30 @@ public class SecurityInterceptor(IDetectionEngine detectionEngine, IRaspMetrics 
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(continuation);
 
-        var sw = Stopwatch.StartNew();
-        string method = context.Method;
+        InspectMessage(request as IMessage, "Incoming Request", context.Method);
 
-        try
-        {
-            if (request is not IMessage protoMessage) return await continuation(request, context).ConfigureAwait(false);
-            var fields = protoMessage.Descriptor.Fields.InFieldNumberOrder();
+        var response = await continuation(request, context).ConfigureAwait(false);
 
-            foreach (var field in fields)
-            {
-                if (field.FieldType != FieldType.String) continue;
-                string? value = field.Accessor.GetValue(protoMessage) as string;
+        InspectMessage(response as IMessage, "Outgoing Response", context.Method);
 
-                if (string.IsNullOrEmpty(value)) continue;
-                var result = detectionEngine.Inspect(value, method);
-
-                if (!result.IsThreat) continue;
-                metrics.ReportThreat("gRPC", result.ThreatType!, blocked: true);
-
-                throw new RpcException(new Status(
-                    StatusCode.PermissionDenied,
-                    $"RASP Security Alert: {result.Description}"));
-            }
-
-            return await continuation(request, context).ConfigureAwait(false);
-        }
-        finally
-        {
-            sw.Stop();
-            metrics.RecordInspection("gRPC", sw.Elapsed.TotalMilliseconds);
-        }
+        return response;
     }
+
+    private void InspectMessage(IMessage? message, string flowContext, string method)
+    {
+        if (message == null) return;
+
+        var result = inspector.Inspect(message, engine, _maxScanChars);
+
+        if (!result.IsThreat) return;
+        ArgumentNullException.ThrowIfNull(result.ThreatType);
+        ArgumentNullException.ThrowIfNull(result.Description);
+
+        LogRaspBlockedFlowOnMethodTypeThreattypeReasonReason(logger, flowContext, method, result.ThreatType, result.Description);
+
+        throw new RpcException(new Status(StatusCode.InvalidArgument, $"Security Violation: {result.Description}"));
+    }
+
+    [LoggerMessage(LogLevel.Error, "🛑 RASP Blocked {flow} on {method}. Type: {threatType}. Reason: {reason}")]
+    static partial void LogRaspBlockedFlowOnMethodTypeThreattypeReasonReason(ILogger<SecurityInterceptor> logger, string flow, string method, string threatType, string reason);
 }

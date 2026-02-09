@@ -1,0 +1,14 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Rasp.Benchmarks.Models";
+
+package benchmarks;
+
+message DeepRequest {
+  DeepRequest next = 1;
+  string value = 2;
+}
+
+service DeepRequestService {
+  rpc DeepOperation (DeepRequest) returns (DeepRequest);
+}

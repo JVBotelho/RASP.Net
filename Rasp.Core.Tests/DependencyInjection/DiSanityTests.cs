@@ -29,11 +29,7 @@ public class DiSanityTests
         services.AddGrpc();
 
         // 2. Act
-        services.AddRasp(opt =>
-        {
-            opt.BlockOnDetection = true;
-            opt.EnableMetrics = false;
-        });
+        services.AddRasp(config);
 
         var options = new ServiceProviderOptions
         {
