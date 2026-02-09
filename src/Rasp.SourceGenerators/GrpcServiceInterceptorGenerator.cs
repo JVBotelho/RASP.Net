@@ -1,0 +1,345 @@
+﻿using System.Collections.Immutable;
+using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
+
+namespace Rasp.SourceGenerators;
+
+[Generator]
+public class RaspGrpcGenerator : IIncrementalGenerator
+{
+    public void Initialize(IncrementalGeneratorInitializationContext context)
+    {
+        var services = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (s, _) => IsGrpcCandidate(s),
+                transform: static (ctx, _) => GetServiceMetadata(ctx))
+            .Where(static m => m is not null);
+
+        var collectedServices = services.Collect();
+
+        context.RegisterSourceOutput(collectedServices, static (spc, services) =>
+        {
+            foreach (var service in services)
+            {
+                if (service is not null)
+                {
+                    GenerateInterceptor(spc, service);
+                }
+            }
+        });
+
+        context.RegisterSourceOutput(collectedServices, static (spc, services) => GenerateInstaller(spc, services));
+    }
+
+    private static bool IsGrpcCandidate(SyntaxNode node)
+    {
+        if (node is not ClassDeclarationSyntax c) return false;
+        if (c.BaseList is null || c.BaseList.Types.Count == 0) return false;
+        return c.BaseList.Types.Any(t => t.Type.ToString().EndsWith("Base", StringComparison.Ordinal));
+    }
+
+    private static ServiceMetadata? GetServiceMetadata(GeneratorSyntaxContext context)
+    {
+        var classDecl = (ClassDeclarationSyntax)context.Node;
+        var symbol = context.SemanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
+
+        if (symbol is null || symbol.IsAbstract) return null;
+
+        if (symbol.BaseType == null || !symbol.BaseType.Name.EndsWith("Base", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var methods = new List<MethodMetadata>();
+
+        foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>())
+        {
+            if ((!method.IsOverride && !method.IsVirtual) ||
+                method.DeclaredAccessibility != Accessibility.Public)
+                continue;
+
+            if (method.Parameters.Length != 2) continue;
+
+            var requestType = method.Parameters[0].Type;
+            var contextType = method.Parameters[1].Type;
+
+            if (!contextType.Name.Contains("ServerCallContext")) continue;
+
+            var properties = new List<PropertyPath>();
+
+            ScanProperties(requestType, "", properties, 0);
+
+            if (properties.Count > 0)
+            {
+                methods.Add(new MethodMetadata(
+                    method.Name,
+                    requestType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                    properties));
+            }
+        }
+
+        if (methods.Count == 0) return null;
+
+        return new ServiceMetadata(
+            symbol.Name,
+            symbol.ContainingNamespace.ToDisplayString(),
+            methods);
+    }
+
+    private static void ScanProperties(ITypeSymbol type, string currentPath, List<PropertyPath> paths, int depth)
+    {
+        if (depth > 15) return;
+
+        foreach (var prop in type.GetMembers().OfType<IPropertySymbol>())
+        {
+            if (prop.IsStatic || prop.DeclaredAccessibility != Accessibility.Public) continue;
+
+            string propName = prop.Name;
+            string fullPath = string.IsNullOrEmpty(currentPath) ? propName : $"{currentPath}.{propName}";
+
+            if (prop.Type.SpecialType == SpecialType.System_String)
+            {
+                paths.Add(new PropertyPath(fullPath, IsCollection: false));
+            }
+            else if (IsStringCollection(prop.Type))
+            {
+                paths.Add(new PropertyPath(fullPath, IsCollection: true));
+            }
+            else if (prop.Type.TypeKind == TypeKind.Class && !IsSystemNamespace(prop.Type))
+            {
+                ScanProperties(prop.Type, fullPath, paths, depth + 1);
+            }
+        }
+    }
+
+    private static bool IsStringCollection(ITypeSymbol type)
+    {
+        if (type is INamedTypeSymbol named && named.IsGenericType)
+        {
+            var arg = named.TypeArguments.FirstOrDefault();
+            if (arg?.SpecialType == SpecialType.System_String)
+            {
+                return named.AllInterfaces.Any(i => i.Name == "IEnumerable");
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSystemNamespace(ITypeSymbol type)
+    {
+        return type.ContainingNamespace.ToDisplayString().StartsWith("System", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void GenerateInterceptor(SourceProductionContext context, ServiceMetadata service)
+    {
+        var sb = new StringBuilder();
+        var className = $"{service.ServiceName}RaspInterceptor";
+
+        sb.AppendLine($$"""
+                        // <auto-generated/>
+                        #nullable enable
+                        using System;
+                        using System.Buffers;
+                        using System.Threading.Tasks;
+                        using Grpc.Core;
+                        using Grpc.Core.Interceptors;
+                        using Rasp.Core.Engine;
+                        using Rasp.Core.Infrastructure;
+
+                        namespace {{service.Namespace}};
+
+                        [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Rasp.SourceGenerators", "1.0.0.0")]
+                        public sealed class {{className}} : Interceptor
+                        {
+                            private readonly XssDetectionEngine _xssEngine;
+                            private readonly SqlInjectionDetectionEngine _sqlEngine;
+                            private readonly RaspAlertBus _bus;
+
+                            private static readonly SearchValues<char> _unifiedGuard = 
+                                SearchValues.Create("<>&\"'\\%-;/*:()");
+
+                            private static readonly SearchValues<char> _xssGuard = 
+                                SearchValues.Create("<>&\"'\\%:()");
+
+                            public {{className}}(
+                                XssDetectionEngine xssEngine, 
+                                SqlInjectionDetectionEngine sqlEngine, 
+                                RaspAlertBus bus)
+                            {
+                                _xssEngine = xssEngine;
+                                _sqlEngine = sqlEngine;
+                                _bus = bus;
+                            }
+
+                            public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
+                                TRequest request, 
+                                ServerCallContext context, 
+                                UnaryServerMethod<TRequest, TResponse> continuation)
+                            {
+                                switch (context.Method)
+                                {
+                        """);
+
+        foreach (var method in service.Methods)
+        {
+            sb.AppendLine($$"""
+                                        case var m when m.EndsWith("/{{method.MethodName}}", StringComparison.Ordinal):
+                                            if (request is {{method.RequestType}} msg_{{method.MethodName}})
+                                            {
+                                                Validate_{{method.MethodName}}(msg_{{method.MethodName}}, context.Method);
+                                            }
+                                            break;
+                            """);
+        }
+
+        sb.AppendLine($$"""
+                                }
+                                return await continuation(request, context);
+                            }
+                        """);
+
+        foreach (var method in service.Methods)
+        {
+            sb.AppendLine();
+            sb.AppendLine(
+                $"    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
+            sb.AppendLine(
+                $"    private void Validate_{method.MethodName}({method.RequestType} req, string contextName)");
+            sb.AppendLine("    {");
+
+            foreach (var prop in method.Properties)
+            {
+                string pathSafe = prop.Path.Replace(".", "?.");
+                string loopVar = prop.IsCollection ? "item" : $"val_{Math.Abs(prop.Path.GetHashCode())}";
+
+                if (prop.IsCollection)
+                {
+                    sb.AppendLine($$"""
+                                        if (req.{{pathSafe}} != null)
+                                        {
+                                            foreach (var item in req.{{prop.Path}})
+                                            {
+                                                if (string.IsNullOrEmpty(item)) continue;
+                                                var span = item.AsSpan();
+                                                
+                                                if (!span.ContainsAny(_unifiedGuard)) continue;
+
+                                                if (span.ContainsAny(_xssGuard))
+                                                {
+                                                    var xssRes = _xssEngine.Inspect(span, "{{prop.Path}}");
+                                                    if (xssRes.IsThreat) 
+                                                    {
+                                                        _bus.PushAlert(xssRes.ThreatType ?? "Unknown", item, $"{{prop.Path}} in {contextName}");
+                                                        throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                    }
+                                                }
+
+                                                var sqlRes = _sqlEngine.Inspect(span, "{{prop.Path}}");
+                                                if (sqlRes.IsThreat) 
+                                                {
+                                                    _bus.PushAlert(sqlRes.ThreatType ?? "Unknown", item, $"{{prop.Path}} in {contextName}");
+                                                    throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                }
+                                            }
+                                        }
+                                    """);
+                }
+                else
+                {
+                    sb.AppendLine($$"""
+                                        var {{loopVar}} = req.{{pathSafe}};
+                                        if (!string.IsNullOrEmpty({{loopVar}}))
+                                        {
+                                            var span = {{loopVar}}.AsSpan();
+
+                                            if (span.ContainsAny(_unifiedGuard))
+                                            {
+                                                if (span.ContainsAny(_xssGuard))
+                                                {
+                                                    var xssRes = _xssEngine.Inspect(span, "{{prop.Path}}");
+                                                    if (xssRes.IsThreat)
+                                                    {
+                                                        _bus.PushAlert(xssRes.ThreatType ?? "Unknown", {{loopVar}}, $"{{prop.Path}} in {contextName}");
+                                                        throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                    }
+                                                }
+
+                                                var sqlRes = _sqlEngine.Inspect(span, "{{prop.Path}}");
+                                                if (sqlRes.IsThreat)
+                                                {
+                                                    _bus.PushAlert(sqlRes.ThreatType ?? "Unknown", {{loopVar}}, $"{{prop.Path}} in {contextName}");
+                                                    throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                }
+                                            }
+                                        }
+                                    """);
+                }
+            }
+            sb.AppendLine("    }");
+        }
+
+        sb.AppendLine("}");
+        context.AddSource($"{className}.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+    }
+
+    private static void GenerateInstaller(SourceProductionContext context, ImmutableArray<ServiceMetadata?> services)
+    {
+        // Only generate if there are valid services
+        var validServices = services.Where(s => s is not null).ToList();
+        if (validServices.Count == 0) return;
+
+        // Use the namespace of the first service to avoid conflicts between assemblies
+        var targetNamespace = validServices[0]!.Namespace;
+
+        var sb = new StringBuilder();
+        sb.AppendLine($$"""
+                      // <auto-generated/>
+                      using Microsoft.Extensions.DependencyInjection;
+                      using Grpc.AspNetCore.Server;
+
+                      namespace {{targetNamespace}};
+
+                      [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Rasp.SourceGenerators", "1.0.0.0")]
+                      public static class RaspServiceCollectionExtensions
+                      {
+                          /// <summary>
+                          /// Automatically registers all RASP Interceptors found in this assembly.
+                          /// </summary>
+                          public static IGrpcServerBuilder AddRaspSecurity(this IGrpcServerBuilder builder)
+                          {
+                      """);
+
+        foreach (var service in validServices)
+        {
+            sb.AppendLine(
+                $"        builder.Services.AddSingleton<{service!.Namespace}.{service.ServiceName}RaspInterceptor>();");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("        builder.Services.Configure<GrpcServiceOptions>(options =>");
+        sb.AppendLine("        {");
+
+        foreach (var service in validServices)
+        {
+            sb.AppendLine(
+                $"            options.Interceptors.Add<{service!.Namespace}.{service.ServiceName}RaspInterceptor>();");
+        }
+
+        sb.AppendLine("        });");
+
+        sb.AppendLine("""
+                              return builder;
+                          }
+                      }
+                      """);
+
+        context.AddSource("RaspServiceCollectionExtensions.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+    }
+
+    sealed record ServiceMetadata(string ServiceName, string Namespace, List<MethodMetadata> Methods);
+
+    sealed record MethodMetadata(string MethodName, string RequestType, List<PropertyPath> Properties);
+
+    sealed record PropertyPath(string Path, bool IsCollection);
+}

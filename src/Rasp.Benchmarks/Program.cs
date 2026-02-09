@@ -1,4 +1,4 @@
 ﻿using BenchmarkDotNet.Running;
 using Rasp.Benchmarks;
 
-BenchmarkRunner.Run<InterceptorBenchmarks>();
+BenchmarkRunner.Run<DeepNestingBenchmark>();

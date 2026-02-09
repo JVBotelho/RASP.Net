@@ -1,45 +1,24 @@
-﻿using Grpc.AspNetCore.Server;
+﻿using System;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Rasp.Bootstrapper.Configuration;
-using Rasp.Bootstrapper.Native;
-using Rasp.Core;
-using Rasp.Instrumentation.Grpc.Interceptors;
+using Rasp.Core.Configuration;
+using Rasp.Core.Engine;
+using Rasp.Core.Infrastructure;
 
 namespace Rasp.Bootstrapper;
 
-/// <summary>
-/// Provides extension methods to easily register RASP services.
-/// </summary>
-public static class RaspDependencyInjection
+public static partial class RaspDependencyInjection
 {
-    /// <summary>
-    /// Adds the RASP (Runtime Application Self-Protection) services to the DI container.
-    /// This method registers detection engines, telemetry, and gRPC interceptors.
-    /// </summary>
-    /// <param name="services">The application service collection.</param>
-    /// <param name="configureOptions">Optional delegate to configure RASP behavior.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddRasp(
-        this IServiceCollection services,
-        Action<RaspOptions>? configureOptions = null)
+    public static IServiceCollection AddRasp(this IServiceCollection services, IConfiguration configuration)
     {
-        if (configureOptions != null)
-        {
-            services.Configure(configureOptions);
-        }
+        ArgumentNullException.ThrowIfNull(configuration);
+        // 1. Configure Options
+        services.Configure<RaspOptions>(configuration.GetSection(RaspOptions.SectionName));
 
-        services.AddRaspCore();
-
-        services.AddSingleton<NativeGuard>();
-
-        services.AddSingleton<SecurityInterceptor>();
-
-        services.PostConfigure<GrpcServiceOptions>(options =>
-        {
-            options.Interceptors.Add<SecurityInterceptor>();
-        });
-
-        services.AddHostedService<RaspIntegrityService>();
+        // 2. Register detection engines for generated interceptors
+        services.AddSingleton<XssDetectionEngine>();
+        services.AddSingleton<SqlInjectionDetectionEngine>();
+        services.AddSingleton<RaspAlertBus>();
 
         return services;
     }

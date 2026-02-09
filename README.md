@@ -7,81 +7,77 @@
 ![Coverage](https://img.shields.io/codecov/c/github/JVBotelho/RASP.Net?style=for-the-badge)
 [![Threat Model](https://img.shields.io/badge/📄_Threat_Model-Read-orange?style=for-the-badge)](docs/ATTACK_SCENARIOS.md)
 [![Reverse Engineering](https://img.shields.io/badge/🕵️_Anti--Debug-Research-blueviolet?style=for-the-badge)](docs/REVERSE_ENGINEERING.md)
-> **Runtime Application Self-Protection (RASP) for High-Scale .NET Services**
+
+> **Runtime Application Self-Protection (RASP) for High-Scale .NET Services**  
 > *Defense that lives inside your application process, operating at the speed of code.*
 
 ---
 
 ## 🎮 Why This Matters for Gaming Security
 
-**The Problem**: Multiplayer game services process **millions of transactions per second**. Traditional WAFs introduce network latency and cannot see inside the encrypted gRPC payload or understanding game logic context.
+**The Problem**: Multiplayer game services process **millions of transactions per second**. Traditional WAFs introduce network latency and cannot see inside encrypted gRPC payloads or understand game logic context.
 
-**The Solution**: RASP.Net acts as a **last line of defense** inside the game server process. It instruments the runtime to detect attacks that bypass perimeter defenses, detecting logic flaws like item duplication exploits or economy manipulation.
+**The Solution**: RASP.Net acts as a **last line of defense** inside the game server process. It instruments the runtime to detect attacks that bypass perimeter defenses—detecting logic flaws like item duplication exploits or economy manipulation.
 
 **Key Engineering Goals:**
-1.  **Zero GC Pressure**: Security checks must NOT trigger Garbage Collection pauses that cause frame drops/lag.
-2.  **Sub-Microsecond Latency**: Checks happen in nanoseconds, not milliseconds.
-3.  **Defense in Depth**: Complements kernel-level Anti-Cheat (BattlEye/EAC) by protecting the backend API layer.
+1. **Zero GC Pressure**: Security checks must NOT trigger Garbage Collection pauses that cause frame drops/lag
+2. **Sub-Microsecond Latency**: Checks happen in nanoseconds, not milliseconds
+3. **Defense in Depth**: Complements kernel-level Anti-Cheat (BattlEye/EAC) by protecting the backend API layer
 
 ---
 
 ## ⚡ Performance Benchmarks
 
-**Methodology:** Benchmarks isolate the intrinsic cost of the `SqlInjectionDetectionEngine` using `BenchmarkDotNet`.
-**Hardware:** AMD Ryzen 7 7800X3D (4.2GHz) | **Runtime:** .NET 10.0.2
+**Methodology:** `BenchmarkDotNet` comparing Source Generator (compile-time) vs Reflection (runtime) instrumentation.  
+**Hardware:** AMD Ryzen 7 7800X3D | **Runtime:** .NET 10.0.2 (RyuJIT AVX-512)
 
-| Payload Size | Scenario | Mean Latency | Allocation | Verdict |
-| :--- | :--- | :--- | :--- | :--- |
-| **100 Bytes** | ✅ Safe Scan (Hot Path) | **4.3 ns** | **0 Bytes** | **Zero-Alloc** 🚀 |
-| | 🛡️ Attack Detected | **202.0 ns** | 232 Bytes | Blocked |
-| **1 KB** | ✅ Safe Scan (Hot Path) | **16.4 ns** | **0 Bytes** | **Zero-Alloc** 🚀 |
-| | 🛡️ Attack Detected | **1,036 ns** | 232 Bytes | Blocked |
-| **10 KB** | ✅ Safe Scan (Hot Path) | **141.0 ns** | **0 Bytes** | **Zero-Alloc** 🚀 |
-| | ⚠️ Deep Inspection | **5,871 ns** | 0 Bytes | Suspicious |
+| Method | Scenario | Mean | Allocated | Speedup |
+|:-------|:---------|-----:|----------:|:-------:|
+| **Source Generator** | ✅ Clean Scan | **108.9 ns** | 136 B | **10.3x faster** 🚀 |
+| Reflection | ✅ Clean Scan | 1,120.0 ns | 136 B | *baseline* |
+| **Source Generator** | 🛡️ Attack Blocked | **4,090 ns** | 1,912 B | **1.04x faster** |
+| Reflection | 🛡️ Attack Blocked | 4,260 ns | 1,552 B | *baseline* |
 
-> **Key Takeaway:**
-> * **Hot Path Optimization:** For 99% of legitimate traffic (Safe Scan), the engine uses vectorized SIMD checks (`SearchValues<T>`), incurring negligible overhead (**~4ns**).
-> * **Zero Allocation:** The inspection pipeline uses `stackalloc` and `Span<T>` buffers, ensuring **0 GC Pressure** during routine checks.
-> * **Deep Inspection:** Only when suspicious characters (e.g., `'`, `--`) are detected does the engine perform full normalization, costing a few microseconds but protecting the app.
+> **Key Insights:**
+> * **10x Faster Hot Path:** Source-generated interceptors eliminate runtime reflection overhead, critical for high-throughput game servers
+> * **Sub-Microsecond Latency:** Clean traffic passes through in **~109 nanoseconds**—invisible
+> * **SIMD Optimization:** Uses `SearchValues<T>` for vectorized character scanning before deep inspection
 
 ---
 
 ## 🛡️ Security Analysis & Threat Modeling
 
-This repository contains professional-grade security documentation demonstrating **Purple Team** capabilities.
+Professional-grade security documentation demonstrating **Purple Team** capabilities.
 
-### 📄 [Threat Model & Attack Scenarios](docs/ATTACK_SCENARIOS.md)
-A comprehensive STRIDE analysis of the Game Economy architecture.
-- **Vectors**: gRPC SQL Injection, Protobuf Tampering, GC Pressure DoS.
-- **Validation**: Python exploit walkthroughs and mitigation strategies.
-
-### 🕵️ [Reverse Engineering & Anti-Tamper](docs/REVERSE_ENGINEERING.md)
-A deep dive into the Native C++ Protection Layer.
-- **Internals**: Analysis of `IsDebuggerPresent`, PEB manipulation, and timing checks.
-- **Bypasses**: Documentation of known evasion techniques (ScyllaHide, Detours) to demonstrate adversarial thinking.
-- **Roadmap**: Advanced heuristics (RDTSC/SEH) for Phase 2.
+| Document | Description |
+|:---------|:------------|
+| 📄 [Threat Model & Attack Scenarios](docs/ATTACK_SCENARIOS.md) | STRIDE analysis: gRPC SQL Injection, Protobuf Tampering, GC Pressure DoS |
+| 🕵️ [Reverse Engineering & Anti-Tamper](docs/REVERSE_ENGINEERING.md) | Native C++ protection: `IsDebuggerPresent`, PEB manipulation, timing checks |
 
 ---
 
-## 🏗️ Architecture: Composite Solution
+## 🏗️ Architecture
 
-This repository utilizes a **Composite Architecture Strategy**.  
-It is designed to develop and validate the Security SDK (`Rasp.*`) by instrumenting a real-world "Victim" application (`dotnet-grpc-library-api`) without polluting its source code.
+This repository uses a **Composite Architecture Strategy**—developing and validating the Security SDK by instrumenting a real-world "Victim" application without polluting its source code.
 
-### 📂 Structure
-
-| Directory | Component | Description |
-|:----------|:----------|:------------|
-| **`src/`** | 🛡️ **The Defense (SDK)** | The RASP Source Code. |
-| `├── Rasp.Core` | 🧠 *Kernel* | Detection engine & telemetry contracts |
-| `├── Rasp.Instrumentation.Grpc` | 📡 *Sensor* | gRPC request interceptors |
-| `├── Rasp.Bootstrapper` | ⚙️ *Loader* | DI extensions (`AddRasp()`) |
-| **`modules/`** | 🎯 **The Victim (Target)** | Git submodules |
-| `└── dotnet-grpc-library-api` | 🏛️ *App* | Clean Architecture sample |
+```
+RASP.Net/
+├── src/                           # 🛡️ RASP SDK (Defense)
+│   ├── Rasp.Core/                 # Detection engines & telemetry
+│   ├── Rasp.SourceGenerators/     # Roslyn code generation
+│   ├── Rasp.Instrumentation.Grpc/ # gRPC interceptors
+│   └── Rasp.Bootstrapper/         # DI extensions (AddRasp())
+├── modules/                       # 🎯 Victim App (Target)
+│   └── dotnet-grpc-library-api/   # Git submodule - Clean Architecture sample
+├── attack/                        # ⚔️ Red Team Tools
+│   ├── exploit_xss.py             # XSS attack suite
+│   └── exploit_grpc.py            # SQLi attack suite
+└── scripts/                       # Automation scripts
+```
 
 ---
 
-## 🛡️ How It Works (Attack Flow)
+## 🛡️ How It Works
 
 ```mermaid
 sequenceDiagram
@@ -91,10 +87,9 @@ sequenceDiagram
     participant GameAPI as Game Service
     participant DB as Database
     
-    Note over Attacker,RASP: 🔴 Attack Scenario: Item Duplication
+    Note over Attacker,RASP: 🔴 Attack Scenario
     Attacker->>gRPC: POST /inventory/add {item: "Sword' OR 1=1"}
     gRPC->>RASP: Intercept Request
-    
     activate RASP
     RASP->>RASP: ⚡ Zero-Alloc Inspection
     RASP-->>Attacker: ❌ 403 Forbidden (Threat Detected)
@@ -103,133 +98,129 @@ sequenceDiagram
     Note over Attacker,DB: 🟢 Legitimate Scenario
     Attacker->>gRPC: POST /inventory/add {item: "Legendary Sword"}
     gRPC->>RASP: Intercept Request
-    
     activate RASP
     RASP->>GameAPI: ✅ Clean - Forward Request
     deactivate RASP
-    
     GameAPI->>DB: INSERT INTO inventory...
     DB-->>GameAPI: Success
     GameAPI-->>Attacker: 200 OK
 ```
+
 ---
 
-## 🚀 Setup & Build
+## 🚀 Quick Start
 
-⚠️ **CRITICAL:** This repository relies on submodules. A standard clone will result in missing projects.
+### 1. Clone with Submodules
 
-### 1. Clone Correctly
-
-Use the `--recursive` flag to fetch the Target Application code:
 ```bash
 git clone --recursive https://github.com/JVBotelho/RASP.Net.git
-```
+cd RASP.Net
 
-If you have already cloned without the flag:
-```bash
+# If already cloned without --recursive:
 git submodule update --init --recursive
 ```
 
-### 2. Build the Composite Solution
+### 2. Build & Run
 
-We use a "God Mode" solution file (`Rasp_Dev.sln`) that links both the SDK and the Victim App for a unified debugging experience.
 ```bash
-dotnet build Rasp_Dev.sln
+# Option A: Use automated setup script
+./scripts/pack-local.ps1   # Windows
+./scripts/pack-local.sh    # Linux/macOS
+
+# Option B: Build directly
+dotnet build Rasp.sln
+```
+
+### 3. Run the Victim App
+
+```bash
+cd modules/dotnet-grpc-library-api
+dotnet run --project LibrarySystem.Grpc
+```
+
+---
+
+## ⚔️ Security Testing (Red Team)
+
+### Prerequisites
+
+```bash
+pip install grpcio grpcio-tools
+```
+
+### Generate Attack Protos
+
+```powershell
+# Windows
+python -m grpc_tools.protoc `
+  -I ./modules/dotnet-grpc-library-api/LibrarySystem.Contracts/Protos `
+  --python_out=./attack --grpc_python_out=./attack `
+  ./modules/dotnet-grpc-library-api/LibrarySystem.Contracts/Protos/library.proto
+```
+
+```bash
+# Linux/macOS
+python3 -m grpc_tools.protoc \
+  -I ./modules/dotnet-grpc-library-api/LibrarySystem.Contracts/Protos \
+  --python_out=./attack --grpc_python_out=./attack \
+  ./modules/dotnet-grpc-library-api/LibrarySystem.Contracts/Protos/library.proto
+```
+
+### Run Exploit Suites
+
+```bash
+# Target app must be running on localhost:5049
+python attack/exploit_xss.py localhost:5049
+python attack/exploit_grpc.py localhost:5049
+```
+
+**Expected Output:**
+```
+📊 XSS Security Report
+========================================
+Attacks Blocked:  ✅ 7
+Bypasses Found:   ❌ 0
+False Positives:  ✅ 0
 ```
 
 ---
 
 ## 🔧 Troubleshooting
 
-**Problem**: `Submodule 'modules/dotnet-grpc-library-api' not found`  
-**Solution**: Run `git submodule update --init --recursive`
-
-**Problem**: `The type or namespace name 'Rasp' could not be found`  
-**Solution**: Ensure you're opening `Rasp_Dev.sln`, not individual `.csproj` files
-
-**Problem**: gRPC service not starting  
-**Solution**: Check if port 5001 is already in use: `netstat -ano | findstr :5001`
-
----
-
-## 🧪 Development Workflow
-
-The Composite Solution allows you to debug the SDK as if it were part of the application, while keeping git histories separate.
-
-1. Open `Rasp_Dev.sln` in Rider or Visual Studio.
-2. **Set Startup Project**: Select `LibrarySystem.Api` (from the `modules` folder).
-3. **Debug**: Breakpoints in `Rasp.Instrumentation.Grpc` will be hit when requests are sent to the API.
-
----
-
-## 🛑 Rules of Engagement
-
-- **Modify `src/`**: Commits go to this repository (`RASP.Net`).
-- **Modify `modules/`**: Commits go to the `dotnet-grpc-library-api` repository. Do not modify the victim code unless necessary for integration hooks.
-
----
-
-## 🛡️ Security & Performance Goals
-
-- **Zero-Allocation Hot Paths**: Usage of `Span<T>` and frozen collections to minimize GC pressure during inspection.
-- **Observability First**: Native OpenTelemetry integration (`System.Diagnostics.ActivitySource`).
-- **Safe by Design**: Strict mode enabled (`<TreatWarningsAsErrors>true`).
+| Problem | Solution |
+|:--------|:---------|
+| `Submodule not found` | Run `git submodule update --init --recursive` |
+| `Namespace 'Rasp' not found` | Open `Rasp.sln`, not individual `.csproj` files |
+| `gRPC UNAVAILABLE` | Check target port matches (default: `localhost:5049`) |
+| `Proto files not found` | Run `pip install --upgrade grpcio-tools` |
 
 ---
 
 ## 🎯 Roadmap
 
-- [x] **Phase 1**: Setup & Vulnerability injection in Target App
-- [x] **Phase 2**: gRPC Interceptor with payload inspection
-- [ ] **Phase 3**: EF Core Interceptor with SQL analysis 🚧 **IN PROGRESS**
-- [ ] **Phase 4**: Benchmarks & Documentation
+- [x] **Phase 1**: Composite solution setup & vulnerability injection
+- [x] **Phase 2**: gRPC Interceptor with XSS/SQLi detection
+- [x] **Phase 3**: Source Generator for zero-config integration
+- [ ] **Phase 4**: EF Core Interceptor with SQL analysis 🚧
+- [ ] **Phase 5**: Native anti-tamper layer
 
 ---
 
-## 🤝 Contributing
-
-This is an educational/research project for **Advanced AppSec Training**.  
-Contributions are welcome via pull requests. Please ensure:
-
-- All tests pass (`dotnet test`)
-- Code follows .NET conventions (`dotnet format`)
-- Security improvements are documented
-
----
-
-## 📖 References
+## 📚 References
 
 - [OWASP RASP](https://owasp.org/www-community/controls/Runtime_Application_Self_Protection)
-- [gRPC Interceptors in .NET](https://learn.microsoft.com/en-us/aspnet/core/grpc/interceptors)
-- [EF Core Interceptors](https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/interceptors)
+- [.NET Source Generators](https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/source-generators-overview)
+- [gRPC Interceptors](https://learn.microsoft.com/en-us/aspnet/core/grpc/interceptors)
+- [SIMD in .NET](https://learn.microsoft.com/en-us/dotnet/standard/simd)
 
 ---
 
 ## 📜 License
 
-**MIT License** - Free and open source.
-```
-Copyright (c) 2025 RASP.Net Contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software.
-```
-
-**TL;DR:**
-- ✅ Use commercially, modify, distribute, private use
-- ✅ No restrictions on derivative works
-- ⚠️ Provided "as is" without warranty
-- 📋 Must include license notice in copies
-
-See [LICENSE](LICENSE) for full terms.
+**MIT License** - Free and open source. See [LICENSE](LICENSE) for full terms.
 
 ---
 
-Found a security issue? See [SECURITY.md](SECURITY.md) for responsible disclosure.
+🔐 Found a security issue? See [SECURITY.md](SECURITY.md) for responsible disclosure.
 
----
-
-**⚡ Built with .NET 10 Preview | Powered by Clean Architecture**
+**⚡ Built with .NET 10 | Powered by Clean Architecture**

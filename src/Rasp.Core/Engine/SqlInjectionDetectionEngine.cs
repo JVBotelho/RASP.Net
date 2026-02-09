@@ -1,4 +1,6 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Rasp.Core.Abstractions;
 using Rasp.Core.Engine.Sql;
@@ -26,59 +28,60 @@ public partial class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEn
     /// <summary>
     /// Inspects the provided payload for SQL Injection patterns.
     /// </summary>
-    /// <param name="payload">The raw input string to analyze (e.g., a query parameter or JSON field).</param>
-    /// <param name="context">Metadata describing the source of the payload (e.g., "gRPC/CreateBook") for logging purposes.</param>
-    /// <returns>
-    /// A <see cref="DetectionResult"/> indicating whether the payload is safe or contains a threat.
-    /// </returns>
-    /// <remarks>
-    /// <b>Performance Characteristics:</b>
-    /// <list type="bullet">
-    /// <item>
-    ///     <description><b>Fast Path (SIMD):</b> Uses <see cref="SearchValues{T}"/> to scan for dangerous characters (e.g., quotes, comments). 
-    ///     Safe inputs return immediately with near-zero overhead (~4ns).</description>
-    /// </item>
-    /// <item>
-    ///     <description><b>Zero-Allocation:</b> Uses <c>stackalloc</c> for buffers under 1KB. For larger payloads, 
-    ///     it rents from <see cref="ArrayPool{T}"/> to avoid GC pressure.</description>
-    /// </item>
-    /// <item>
-    ///     <description><b>DoS Protection:</b> Inputs larger than 4KB are truncated before analysis to guarantee bounded execution time.</description>
-    /// </item>
-    /// </list>
-    /// </remarks>
     public DetectionResult Inspect(string? payload, string context = "Unknown")
     {
         if (string.IsNullOrEmpty(payload))
             return DetectionResult.Safe();
 
-        var inputSpan = payload.AsSpan();
+        return Inspect(payload.AsSpan(), context);
+    }
+
+    /// <summary>
+    /// Zero-Allocation interface implementation.
+    /// Bridges the typed context to the internal logic (ignoring XSS context).
+    /// </summary>
+    public DetectionResult Inspect(ReadOnlySpan<char> payload, XssRenderContext context)
+    {
+        // SQL Injection detection is generally context-agnostic regarding HTML rendering.
+        // We pass "Unknown" as metadata for logging purposes.
+        return Inspect(payload, "Unknown");
+    }
+
+    /// <summary>
+    /// Internal Core Logic using Span and String Context.
+    /// </summary>
+    public DetectionResult Inspect(ReadOnlySpan<char> payload, string context = "Unknown")
+    {
+        if (payload.IsEmpty)
+            return DetectionResult.Safe();
 
         // Fast Path (SIMD)
-        if (!inputSpan.ContainsAny(DangerousChars))
+        if (!payload.ContainsAny(DangerousChars))
         {
             return DetectionResult.Safe();
         }
 
         // DoS Protection
-        if (inputSpan.Length > MaxAnalysisLength)
+        if (payload.Length > MaxAnalysisLength)
         {
-            inputSpan = inputSpan.Slice(0, MaxAnalysisLength);
+            payload = payload.Slice(0, MaxAnalysisLength);
         }
 
         char[]? rentedBuffer = null;
-        Span<char> normalizedBuffer = inputSpan.Length <= MaxStackAllocSize
-            ? stackalloc char[inputSpan.Length]
-            : (rentedBuffer = ArrayPool<char>.Shared.Rent(inputSpan.Length));
+        Span<char> normalizedBuffer = payload.Length <= MaxStackAllocSize
+            ? stackalloc char[payload.Length]
+            : (rentedBuffer = ArrayPool<char>.Shared.Rent(payload.Length)).AsSpan(0, payload.Length);
 
         try
         {
-            int written = SqlNormalizer.Normalize(inputSpan, normalizedBuffer);
+            // Note: Ensure SqlNormalizer and SqlHeuristics exist in Rasp.Core.Engine.Sql
+            int written = SqlNormalizer.Normalize(payload, normalizedBuffer);
             var searchSpace = normalizedBuffer.Slice(0, written);
 
             double score = SqlHeuristics.CalculateScore(searchSpace);
 
             if (!(score >= 1.0)) return DetectionResult.Safe();
+
             LogBlockedSqlInjection(logger, score, context);
 
             return DetectionResult.Threat(
@@ -88,7 +91,6 @@ public partial class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEn
                 confidence: 1.0,
                 matchedPattern: "HeuristicScore"
             );
-
         }
         finally
         {
