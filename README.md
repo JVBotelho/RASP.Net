@@ -11,6 +11,14 @@
 > **Runtime Application Self-Protection (RASP) for High-Scale .NET Services**  
 > *Defense that lives inside your application process, operating at the speed of code.*
 
+> [!IMPORTANT]
+> **🚧 ARCHITECTURAL PREVIEW / ALPHA STAGE**
+>
+> This project is currently in **Active Research & Development**. 
+> * **Do not deploy to production** environments handling real assets (PII, Financial Data) without a full security audit.
+> * **API Stability:** Public interfaces and interception signatures may undergo **breaking changes** to optimize for zero-allocation performance.
+> * **Security:** While designed to block attacks, this engine is currently being tuned for false positives/negatives.
+
 ---
 
 ## 🎮 Why This Matters for Gaming Security
