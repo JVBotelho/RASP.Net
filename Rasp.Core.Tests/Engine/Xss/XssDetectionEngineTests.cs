@@ -25,6 +25,49 @@ public class XssDetectionEngineTests
     }
 
     [Theory]
+    [InlineData("<script")]
+    [InlineData("javascript:")]
+    [InlineData("vbscript:")]
+    [InlineData("data:text")]
+    [InlineData("view-source:")]
+    [InlineData("feed:")]
+    [InlineData("<meta")]
+    [InlineData("<iframe")]
+    [InlineData("<object")]
+    [InlineData("<embed")]
+    [InlineData("<applet")]
+    [InlineData("<style")]
+    [InlineData("<template")]
+    [InlineData("<noscript")]
+    public void Inspect_KillSwitchPatterns_ShouldBeCritical(string payload)
+    {
+        var result = _sut.Inspect(payload);
+        result.IsThreat.Should().BeTrue();
+        result.ThreatType.Should().Be("XSS");
+        result.Severity.Should().Be(Rasp.Core.Enums.ThreatSeverity.Critical);
+    }
+
+    [Theory]
+    [InlineData("%3Cscript")] // Obfuscated case to trigger canonicalization check at line 59
+    public void Inspect_ObfuscatedKillSwitch_ShouldBeCritical(string payload)
+    {
+        var result = _sut.Inspect(payload);
+        result.IsThreat.Should().BeTrue();
+        result.ThreatType.Should().Be("XSS");
+        result.Severity.Should().Be(Rasp.Core.Enums.ThreatSeverity.Critical);
+    }
+
+    [Theory]
+    [InlineData("<link")]
+    [InlineData("data:image/svg+xml")]
+    [InlineData("<svg onload=")]
+    public void Inspect_Heuristics_ShouldStillTrigger(string payload)
+    {
+        var result = _sut.Inspect(payload);
+        result.IsThreat.Should().BeTrue();
+    }
+
+    [Theory]
     [InlineData("<img src=x onerror=alert(1)>")]
     [InlineData("<img src=x onerror=\"alert(1)\">")]
     [InlineData("<IMG SRC=x ONERROR=alert(1)>")]

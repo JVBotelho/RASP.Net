@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 
 // ReSharper disable ReplaceSliceWithRangeIndexer
@@ -10,7 +10,7 @@ internal static class XssHeuristics
 {
     // High Risk Tags: Immediate execution probability.
     private static readonly SearchValues<string> ExecutionTags = SearchValues.Create(
-        ["<script", "<iframe", "<object", "<embed", "<applet", "<meta", "<link", "<style", "<template", "<noscript"],
+        ["<link"],
         StringComparison.OrdinalIgnoreCase);
 
     // Suspicious Tags: Context-dependent risk.
@@ -20,7 +20,7 @@ internal static class XssHeuristics
 
     // Dangerous Protocols: Pseudo-protocols that execute code.
     private static readonly SearchValues<string> DangerousProtocols = SearchValues.Create(
-        ["javascript:", "vbscript:", "data:text/html", "data:text/html;base64", "data:image/svg+xml"],
+        ["data:image/svg+xml"],
         StringComparison.OrdinalIgnoreCase);
 
     // DOM Events: Optimized for SIMD Aho-Corasick search (NET 9+)

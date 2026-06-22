@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Rasp.Core.Abstractions;
 using Rasp.Core.Engine;
@@ -14,8 +14,8 @@ public static class RaspCoreExtensions
     /// </summary>
     public static IServiceCollection AddRaspCore(this IServiceCollection services)
     {
+        services.TryAddSingleton<Rasp.Core.Infrastructure.RaspAlertBus>();
         services.TryAddSingleton<IRaspMetrics, RaspMetrics>();
-        services.TryAddSingleton<IDetectionEngine, SqlInjectionDetectionEngine>();
 
         return services;
     }

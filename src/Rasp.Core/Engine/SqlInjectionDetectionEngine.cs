@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
@@ -36,16 +36,7 @@ public partial class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEn
         return Inspect(payload.AsSpan(), context);
     }
 
-    /// <summary>
-    /// Zero-Allocation interface implementation.
-    /// Bridges the typed context to the internal logic (ignoring XSS context).
-    /// </summary>
-    public DetectionResult Inspect(ReadOnlySpan<char> payload, XssRenderContext context)
-    {
-        // SQL Injection detection is generally context-agnostic regarding HTML rendering.
-        // We pass "Unknown" as metadata for logging purposes.
-        return Inspect(payload, "Unknown");
-    }
+
 
     /// <summary>
     /// Internal Core Logic using Span and String Context.
@@ -61,10 +52,17 @@ public partial class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEn
             return DetectionResult.Safe();
         }
 
-        // DoS Protection
+        // DoS Protection: Fail-secure
         if (payload.Length > MaxAnalysisLength)
         {
-            payload = payload.Slice(0, MaxAnalysisLength);
+            LogBlockedSqlInjection(logger, 1.0, context + " (Payload Limit Exceeded)");
+            return DetectionResult.Threat(
+                threatType: "SQL Injection",
+                description: "Payload length exceeds maximum analysis threshold",
+                severity: ThreatSeverity.Critical,
+                confidence: 1.0,
+                matchedPattern: "PayloadLimit"
+            );
         }
 
         char[]? rentedBuffer = null;
@@ -87,7 +85,7 @@ public partial class SqlInjectionDetectionEngine(ILogger<SqlInjectionDetectionEn
             return DetectionResult.Threat(
                 threatType: "SQL Injection",
                 description: $"SQL Injection Patterns Detected (Score: {score})",
-                severity: ThreatSeverity.High,
+                severity: ThreatSeverity.Critical,
                 confidence: 1.0,
                 matchedPattern: "HeuristicScore"
             );

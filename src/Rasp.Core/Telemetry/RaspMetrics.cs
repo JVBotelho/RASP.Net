@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Rasp.Core.Abstractions;
 
@@ -16,7 +16,7 @@ public sealed class RaspMetrics : IRaspMetrics
     private readonly Counter<long> _threatsCounter;
     private readonly Histogram<double> _durationHistogram;
 
-    public RaspMetrics(IMeterFactory meterFactory)
+    public RaspMetrics(IMeterFactory meterFactory, Rasp.Core.Infrastructure.RaspAlertBus bus)
     {
 #pragma warning disable CA2000
         var meter = meterFactory.Create(MeterName, "1.0.0");
@@ -34,6 +34,11 @@ public sealed class RaspMetrics : IRaspMetrics
             "rasp.inspection.duration",
             unit: "ms",
             description: "Distribution of time taken to inspect requests");
+            
+        meter.CreateObservableCounter<long>(
+            "rasp.alerts.dropped",
+            () => bus.DroppedCount,
+            description: "Number of alerts dropped due to full bus channel");
     }
 
     public void RecordInspection(string layer, double durationMs)
