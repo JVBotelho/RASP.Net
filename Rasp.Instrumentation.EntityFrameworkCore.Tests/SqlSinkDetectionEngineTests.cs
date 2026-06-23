@@ -7,7 +7,7 @@ namespace Rasp.Instrumentation.EntityFrameworkCore.Tests;
 
 public class SqlSinkDetectionEngineTests
 {
-    private readonly SqlSinkDetectionEngine _sut = new(NullLogger<SqlSinkDetectionEngine>.Instance);
+    private readonly SqlSinkDetectionEngine _sut = new();
 
     [Theory]
     [InlineData("SELECT * FROM Users WHERE Name = 'a' OR 1=1")]
@@ -36,16 +36,11 @@ public class SqlSinkDetectionEngineTests
 
     [Theory]
     [InlineData("SELECT * FROM Users WHERE Name = 'a' -- comment")] // Has non-whitespace before --
-    [InlineData("SELECT * FROM Users WHERE Name = 'a' /* comment */")] // Breakout using --
     public void Inspect_ShouldDetect_CommentBreakout(string payload)
     {
-        // Wait, the engine only looks for -- breakout right now.
-        if (payload.Contains("--"))
-        {
-            var result = _sut.Inspect(payload);
-            result.IsThreat.Should().BeTrue();
-            result.MatchedPattern.Should().Be("CommentBreakout");
-        }
+        var result = _sut.Inspect(payload);
+        result.IsThreat.Should().BeTrue();
+        result.MatchedPattern.Should().Be("CommentBreakout");
     }
 
     [Theory]

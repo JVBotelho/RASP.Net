@@ -14,7 +14,7 @@ namespace Rasp.Core.Engine;
 /// and focuses strictly on anomalies that legitimate ORMs do not generate:
 /// literal tautologies, dangerous stacked queries, and comment breakouts.
 /// </summary>
-public partial class SqlSinkDetectionEngine(ILogger<SqlSinkDetectionEngine> logger) : IDetectionEngine
+public class SqlSinkDetectionEngine : IDetectionEngine
 {
     private static readonly SearchValues<char> DangerousChars = SearchValues.Create("-;1'");
 
@@ -36,7 +36,6 @@ public partial class SqlSinkDetectionEngine(ILogger<SqlSinkDetectionEngine> logg
 
         if (payload.Length > MaxAnalysisLength)
         {
-            LogBlockedSqlSink(logger, "Payload Limit Exceeded", context);
             return DetectionResult.Threat(
                 threatType: "SQL Injection",
                 description: "Command text length exceeds maximum analysis threshold",
@@ -49,7 +48,6 @@ public partial class SqlSinkDetectionEngine(ILogger<SqlSinkDetectionEngine> logg
         // 1. Comment Breakout Analysis (on raw payload, to preserve newlines)
         if (HasCommentBreakout(payload))
         {
-            LogBlockedSqlSink(logger, "CommentBreakout", context);
             return DetectionResult.Threat("SQL Injection", "Comment breakout detected in SQL command", ThreatSeverity.Critical, 1.0, "CommentBreakout");
         }
 
@@ -67,14 +65,12 @@ public partial class SqlSinkDetectionEngine(ILogger<SqlSinkDetectionEngine> logg
             // 2. Literal Tautologies
             if (HasTautology(searchSpace))
             {
-                LogBlockedSqlSink(logger, "Tautology", context);
                 return DetectionResult.Threat("SQL Injection", "Literal tautology detected in SQL command", ThreatSeverity.Critical, 1.0, "Tautology");
             }
 
             // 3. Dangerous Stacked Queries
             if (HasDangerousStackedQuery(searchSpace))
             {
-                LogBlockedSqlSink(logger, "StackedQuery", context);
                 return DetectionResult.Threat("SQL Injection", "Dangerous stacked query detected", ThreatSeverity.Critical, 1.0, "StackedQuery");
             }
 
@@ -162,7 +158,4 @@ public partial class SqlSinkDetectionEngine(ILogger<SqlSinkDetectionEngine> logg
 
         return false;
     }
-
-    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "🛡️ RASP Blocked SQL Sink Threat! Pattern: {Pattern} Context: {Context}")]
-    private static partial void LogBlockedSqlSink(ILogger logger, string pattern, string context);
 }

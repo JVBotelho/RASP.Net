@@ -10,20 +10,24 @@ using Rasp.Core.Engine;
 using Rasp.Core.Exceptions;
 using Rasp.Core.Infrastructure;
 
+using Microsoft.Extensions.Logging;
+
 namespace Rasp.Instrumentation.EntityFrameworkCore.Interceptors;
 
-public class RaspDbCommandInterceptor : DbCommandInterceptor
+public partial class RaspDbCommandInterceptor : DbCommandInterceptor
 {
     private readonly SqlSinkDetectionEngine _engine;
     private readonly RaspAlertBus _bus;
     private readonly IRaspMetrics _metrics;
     private readonly RaspOptions _options;
+    private readonly ILogger<RaspDbCommandInterceptor> _logger;
 
     public RaspDbCommandInterceptor(
         SqlSinkDetectionEngine engine,
         RaspAlertBus bus,
         IRaspMetrics metrics,
-        IOptions<RaspOptions> options)
+        IOptions<RaspOptions> options,
+        ILogger<RaspDbCommandInterceptor> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
         
@@ -31,6 +35,7 @@ public class RaspDbCommandInterceptor : DbCommandInterceptor
         _bus = bus;
         _metrics = metrics;
         _options = options.Value;
+        _logger = logger;
     }
 
     private void AnalyzeCommand(DbCommand command)
@@ -56,10 +61,21 @@ public class RaspDbCommandInterceptor : DbCommandInterceptor
 
             if (_options.BlockOnDetection)
             {
+                LogBlockedSqlSink(_logger, pattern, "EF Core Sink");
                 throw new RaspSecurityException(threatType, description);
+            }
+            else
+            {
+                LogAuditedSqlSink(_logger, pattern, "EF Core Sink");
             }
         }
     }
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "🛡️ RASP Blocked SQL Sink Threat! Pattern: {Pattern} Context: {Context}")]
+    private static partial void LogBlockedSqlSink(ILogger logger, string pattern, string context);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Warning, Message = "👁️ RASP Audited SQL Sink Threat! Pattern: {Pattern} Context: {Context}")]
+    private static partial void LogAuditedSqlSink(ILogger logger, string pattern, string context);
 
     public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
     {

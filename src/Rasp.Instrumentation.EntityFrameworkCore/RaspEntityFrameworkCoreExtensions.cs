@@ -2,6 +2,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Rasp.Core;
 using Rasp.Core.Engine;
 using Rasp.Instrumentation.EntityFrameworkCore.Interceptors;
 
@@ -15,6 +16,10 @@ public static class RaspEntityFrameworkCoreExtensions
     /// </summary>
     public static IServiceCollection AddRaspEntityFrameworkCore(this IServiceCollection services)
     {
+        services.AddRaspCore();
+        
+        services.AddOptions<Rasp.Core.Configuration.RaspOptions>();
+
         services.TryAddSingleton<SqlSinkDetectionEngine>();
         services.TryAddSingleton<RaspDbCommandInterceptor>();
         return services;

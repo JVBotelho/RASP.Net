@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using Rasp.Core;
 using Rasp.Core.Configuration;
 using Rasp.Core.Engine;
 using Rasp.Core.Exceptions;
@@ -47,7 +49,8 @@ public class RaspEntityFrameworkIntegrationTests
         services.AddSingleton(Options.Create(options));
         services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
         services.AddSingleton<RaspAlertBus>();
-        services.AddSingleton<SqlSinkDetectionEngine>(sp => new SqlSinkDetectionEngine(NullLogger<SqlSinkDetectionEngine>.Instance));
+        services.AddSingleton<SqlSinkDetectionEngine>();
+        services.AddLogging();
         services.AddSingleton<RaspDbCommandInterceptor>();
 
         services.AddDbContext<AppDbContext>((sp, dbOptions) =>
@@ -145,12 +148,32 @@ public class RaspEntityFrameworkIntegrationTests
         }
 
         // Verify alert was pushed
-        var alerts = bus.ReadAlertsAsync();
-        var enumerator = alerts.GetAsyncEnumerator();
+        var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var alerts = bus.ReadAlertsAsync(cts.Token);
+        var enumerator = alerts.GetAsyncEnumerator(cts.Token);
         await enumerator.MoveNextAsync();
         var alert = enumerator.Current;
         
         alert.ThreatType.Should().Be("SQL Injection");
         alert.PayloadSnippet.Should().Be("Tautology");
+    }
+
+    [Fact]
+    public void DependencyInjection_ShouldResolveInterceptor()
+    {
+        var services = new ServiceCollection();
+
+        services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
+        services.AddRaspCore();
+        services.AddOptions<RaspOptions>();
+
+        services.AddRaspEntityFrameworkCore();
+        services.AddLogging(); // required for ILogger<T>
+
+        var provider = services.BuildServiceProvider();
+
+        // Should resolve successfully without throwing
+        var interceptor = provider.GetRequiredService<RaspDbCommandInterceptor>();
+        interceptor.Should().NotBeNull();
     }
 }
