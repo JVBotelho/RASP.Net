@@ -12,70 +12,25 @@ using Rasp.Core.Infrastructure;
 
 using Microsoft.Extensions.Logging;
 
+using Rasp.Core.Guard;
+
 namespace Rasp.Instrumentation.EntityFrameworkCore.Interceptors;
 
-public partial class RaspDbCommandInterceptor : DbCommandInterceptor
+public class RaspDbCommandInterceptor : DbCommandInterceptor
 {
-    private readonly SqlSinkDetectionEngine _engine;
-    private readonly RaspAlertBus _bus;
-    private readonly IRaspMetrics _metrics;
-    private readonly RaspOptions _options;
-    private readonly ILogger<RaspDbCommandInterceptor> _logger;
+    private readonly SqlSinkGuard _guard;
 
-    public RaspDbCommandInterceptor(
-        SqlSinkDetectionEngine engine,
-        RaspAlertBus bus,
-        IRaspMetrics metrics,
-        IOptions<RaspOptions> options,
-        ILogger<RaspDbCommandInterceptor> logger)
+    public RaspDbCommandInterceptor(SqlSinkGuard guard)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(guard);
         
-        _engine = engine;
-        _bus = bus;
-        _metrics = metrics;
-        _options = options.Value;
-        _logger = logger;
+        _guard = guard;
     }
-
     private void AnalyzeCommand(DbCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-
-        var stopwatch = Stopwatch.StartNew();
-        var commandText = command.CommandText;
-
-        var result = _engine.Inspect(commandText, context: "EF Core Sink");
-
-        stopwatch.Stop();
-        _metrics.RecordInspection("EntityFrameworkCore", stopwatch.Elapsed.TotalMilliseconds);
-
-        if (result.IsThreat)
-        {
-            var threatType = result.ThreatType ?? "Unknown";
-            var description = result.Description ?? "No description";
-            var pattern = result.MatchedPattern ?? description;
-
-            _metrics.ReportThreat("EntityFrameworkCore", threatType, _options.BlockOnDetection);
-            _bus.PushAlert(threatType, pattern, $"EF Core Command Execution - Confidence: {result.Confidence}");
-
-            if (_options.BlockOnDetection)
-            {
-                LogBlockedSqlSink(_logger, pattern, "EF Core Sink");
-                throw new RaspSecurityException(threatType, description);
-            }
-            else
-            {
-                LogAuditedSqlSink(_logger, pattern, "EF Core Sink");
-            }
-        }
+        _guard.AnalyzeCommand(command.CommandText, "EF Core Sink");
     }
-
-    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "🛡️ RASP Blocked SQL Sink Threat! Pattern: {Pattern} Context: {Context}")]
-    private static partial void LogBlockedSqlSink(ILogger logger, string pattern, string context);
-
-    [LoggerMessage(EventId = 3, Level = LogLevel.Warning, Message = "👁️ RASP Audited SQL Sink Threat! Pattern: {Pattern} Context: {Context}")]
-    private static partial void LogAuditedSqlSink(ILogger logger, string pattern, string context);
 
     public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
     {

@@ -66,8 +66,12 @@ Sending thousands of requests with large strings designed to trigger massive all
 | :--- | :--- | :--- | :--- |
 | **S**poofing | Client Impersonation | gRPC Interceptor Auth Check | 🚧 Planned |
 | **T**ampering | **Protobuf Payload Injection** | **Deep Inspection (Pre-Execution)** | ✅ **Implemented** |
+| **T**ampering | **Command Injection** (`Process.Start`) | Runtime-patched executable allowlist ([ADR 006](ADR/006-sink-instrumentation-strategy.md) Phase B) | ✅ **Implemented** |
+| **T**ampering | **Path Traversal** (`FileStream`/`File.*`) | Runtime-patched canonical-path boundary check (ADR 006 Phase B) | ✅ **Implemented** |
 | **R**epudiation | Action without trace | OpenTelemetry Tracing | ✅ Implemented |
-| **I**nformation Disclosure | **SQLi Data Exfiltration** | **Heuristic Blocking** | ✅ **Implemented** |
+| **I**nformation Disclosure | **SQLi Data Exfiltration** | **Heuristic Blocking** at the EF Core/ADO.NET sink | ✅ **Implemented** |
+| **I**nformation Disclosure | **SSRF** (internal/metadata endpoint access) | `HttpClient` sink: private-IP/metadata-IP block + DNS-rebinding check | ✅ **Implemented** |
+| **I**nformation Disclosure | **Insecure Deserialization** | Type allow/deny guard on `BinaryFormatter`/`TypeNameHandling` | ✅ **Implemented** |
 | **D**enial of Service | **GC Heap Exhaustion** | **Zero-Allocation Engine** | ✅ **Implemented** |
 | **E**levation of Privilege | **Runtime Memory Hooking** | **Native Integrity Guard** | ✅ **Implemented** |
 
@@ -127,10 +131,10 @@ When the exploit runs, the RASP intercepts and blocks execution:
 
 | Limitation | Risk | Current Mitigation | Future Enhancement | Risk Acceptance |
 |:-----------|:-----|:------------------|:------------------|:----------------|
-| **Native DLL Unhooking** | Attackers with kernel access could unload `Rasp.Native.Guard.dll` from process memory | DLL signed with Authenticode | Self-checksum validation + heartbeat monitoring | ⚠️ Accepted for PoC (requires kernel privileges) |
+| **Native DLL Unhooking** | Attackers with kernel access could unload `Rasp.Native.Guard.dll` from process memory | None — `Rasp.Native.Guard.dll` is not Authenticode-signed today | Authenticode signing + self-checksum validation + heartbeat monitoring | ⚠️ Accepted for PoC (requires kernel privileges) |
 | **Time-Based Blind SQLi** | Inference attacks via response time analysis | Blocked by keyword matching (`SELECT`, `CASE`) | Random jitter injection in interceptor pipeline | ⚠️ Accepted (low probability in gRPC context) |
-| **Polyglot Payloads** | Context-aware exploits valid in multiple languages (SQL+NoSQL+OS) | Single-engine detection (SQL focus) | Multi-engine pipeline + ML anomaly detection | ⚠️ Accepted (covers 95% of real-world threats) |
-| **NoSQL Injection** | MongoDB/Cosmos DB query injection | Not currently covered | Phase 3: NoSQL detection engine | ❌ Not Implemented |
+| **Polyglot Payloads** | Context-aware exploits valid in multiple languages (SQL+NoSQL+OS) | Per-vector engines (SQL, XSS, SSRF, Path Traversal, Command Injection, Deserialization) | Cross-engine correlation + ML anomaly detection | ⚠️ Accepted (covers real-world threats mapped to OWASP Top 10; see [ROADMAP.md](ROADMAP.md)) |
+| **NoSQL Injection** | MongoDB/Cosmos DB query injection | Not currently covered | Dedicated NoSQL detection engine (unscheduled) | ❌ Not Implemented |
 
 **Legend**:
 - ✅ Fully Mitigated

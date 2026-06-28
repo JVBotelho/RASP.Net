@@ -48,8 +48,9 @@ public class RaspEntityFrameworkIntegrationTests
         var options = new RaspOptions { BlockOnDetection = blockOnDetection };
         services.AddSingleton(Options.Create(options));
         services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
-        services.AddSingleton<RaspAlertBus>();
-        services.AddSingleton<SqlSinkDetectionEngine>();
+        
+        services.AddRaspCore(); // Registers bus, engine, and guard
+        
         services.AddLogging();
         services.AddSingleton<RaspDbCommandInterceptor>();
 
@@ -163,6 +164,8 @@ public class RaspEntityFrameworkIntegrationTests
     {
         var services = new ServiceCollection();
 
+        // This is the sequence an app would use:
+        // services.AddRasp(configuration); // Let's simulate what AddRasp does since it's in Bootstrapper:
         services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
         services.AddRaspCore();
         services.AddOptions<RaspOptions>();

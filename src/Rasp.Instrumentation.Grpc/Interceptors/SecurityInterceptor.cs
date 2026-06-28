@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Rasp.Core.Configuration;
 using Rasp.Core.Abstractions;
 using Rasp.Core.Infrastructure;
+using Rasp.Core.Context;
 using Google.Protobuf;
 
 namespace Rasp.Instrumentation.Grpc.Interceptors;
@@ -44,11 +45,23 @@ public partial class SecurityInterceptor(
 
         var start = System.Diagnostics.Stopwatch.GetTimestamp();
 
-        InspectMessage(request as IMessage, "Incoming Request", context.Method);
+        var correlationId = Guid.NewGuid().ToString("N");
+        var raspContext = new RaspContext
+        {
+            CorrelationId = correlationId,
+            Source = $"gRPC {context.Method}",
+            RemoteId = context.Peer,
+            TraceId = null, // Can be pulled from headers/Activity if available
+            StartedUtc = DateTime.UtcNow
+        };
+
+        using var scope = RaspExecutionContext.BeginScope(raspContext);
+
+        InspectMessage(request as IMessage, "Incoming Request", context.Method, raspContext);
 
         var response = await continuation(request, context).ConfigureAwait(false);
 
-        InspectMessage(response as IMessage, "Outgoing Response", context.Method);
+        InspectMessage(response as IMessage, "Outgoing Response", context.Method, raspContext);
 
         if (_enableMetrics)
         {
@@ -59,7 +72,7 @@ public partial class SecurityInterceptor(
         return response;
     }
 
-    private void InspectMessage(IMessage? message, string flowContext, string method)
+    private void InspectMessage(IMessage? message, string flowContext, string method, RaspContext raspContext)
     {
         if (message == null) return;
 
@@ -71,7 +84,7 @@ public partial class SecurityInterceptor(
 
         LogThreatBlocked(flowContext, method, result.ThreatType, result.Description);
 
-        bus.PushAlert(result.ThreatType, result.MatchedPattern ?? result.Description, $"Flow: {flowContext}, Method: {method}");
+        bus.PushAlert(raspContext, result.ThreatType, result.MatchedPattern ?? result.Description, $"Flow: {flowContext}, Method: {method}");
         if (_enableMetrics)
         {
             metrics.ReportThreat("gRPC", result.ThreatType, _blockOnDetection);

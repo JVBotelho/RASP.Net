@@ -5,6 +5,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <!-- Must be strong-named to be a valid InternalsVisibleTo friend of the
+             strong-named Rasp.Core (see src/Rasp.Core/InternalsVisibleTo.cs). -->
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>..\src\Rasp.Core\RaspCore.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
 
     <ItemGroup>

@@ -248,7 +248,7 @@ orleans.codegen.cs
 
 # Including strong name files can present a security risk
 # (https://github.com/github/gitignore/pull/2483#issue-259490424)
-#*.snk
+*.snk
 
 # Since there are multiple workflows, uncomment next line to ignore bower_components
 # (https://github.com/github/gitignore/pull/1529#issuecomment-104372622)
@@ -584,3 +584,23 @@ Thumbs.db
 attack/*_pb2.py
 attack/*_pb2_grpc.py
 attack/*.pyi
+# Compressed archives
+*.zip
+*.rar
+*.tar.gz
+*.tgz
+*.7z
+
+# ----------------------------------------------------------------------
+# Native build artifacts (src/Rasp.Native.*)
+# Managed output is already covered by [Bb]in/ + [Oo]bj/ above; these catch the
+# compiled C++ output that lands next to source (Rasp.Native.Guard) or in the
+# Profiler's CMake build dir. .exp is always a linker artifact, never source.
+# ----------------------------------------------------------------------
+*.exp
+src/Rasp.Native.Guard/*.dll
+src/Rasp.Native.Guard/*.lib
+src/Rasp.Native.Guard/*.obj
+src/Rasp.Native.Profiler/build/
+src/Rasp.Native.Profiler/**/*.dll
+src/Rasp.Native.Profiler/**/*.lib

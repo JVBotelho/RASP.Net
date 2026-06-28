@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Rasp.Core.Abstractions;
 using Rasp.Core.Models;
+using Rasp.Core.Context;
 
 namespace Rasp.Core.Infrastructure;
 
@@ -38,6 +39,19 @@ public class RaspAlertBus
     /// </summary>
     public void PushAlert(string threatType, string payload, string context)
     {
+        PushAlertInternal(null, threatType, payload, context);
+    }
+
+    /// <summary>
+    /// Pushes an alert with the ambient RaspContext for request-level provenance.
+    /// </summary>
+    public void PushAlert(RaspContext? ambientContext, string threatType, string payload, string sinkIdentity)
+    {
+        PushAlertInternal(ambientContext, threatType, payload, sinkIdentity);
+    }
+
+    private void PushAlertInternal(RaspContext? ambientContext, string threatType, string payload, string contextString)
+    {
         if (!_pool.TryDequeue(out var alert))
         {
             alert = new RaspAlert();
@@ -46,7 +60,16 @@ public class RaspAlertBus
         alert.ThreatType = threatType;
         alert.PayloadSnippet = string.IsNullOrEmpty(payload) ? string.Empty : 
                                payload.Length > 64 ? string.Concat(payload.AsSpan(0, 64), "...") : payload;
-        alert.Context = context;
+        alert.Context = contextString;
+        
+        if (ambientContext != null)
+        {
+            alert.CorrelationId = ambientContext.CorrelationId;
+            alert.Source = ambientContext.Source;
+            alert.RemoteId = ambientContext.RemoteId;
+            alert.TraceId = ambientContext.TraceId;
+        }
+
         alert.Timestamp = DateTime.UtcNow;
 
         if (!_channel.Writer.TryWrite(alert))
@@ -65,6 +88,10 @@ public class RaspAlertBus
                 alert.ThreatType, 
                 alert.PayloadSnippet, 
                 alert.Context, 
+                alert.CorrelationId,
+                alert.Source,
+                alert.RemoteId,
+                alert.TraceId,
                 alert.Timestamp);
                 
             ReturnToPool(alert);
@@ -84,4 +111,8 @@ public readonly record struct RaspAlertEvent(
     string ThreatType, 
     string PayloadSnippet, 
     string Context, 
+    string? CorrelationId,
+    string? Source,
+    string? RemoteId,
+    string? TraceId,
     DateTime Timestamp);

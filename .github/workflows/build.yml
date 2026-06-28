@@ -25,6 +25,12 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
       fail-fast: true
+    env:
+      # secrets.* is not a valid context inside a step's `if:` (job or step level - GitHub
+      # Actions rejects it at parse time with "Unrecognized named-value: 'secrets'", failing
+      # the whole workflow, not just this step). env.* is a supported context there, so the
+      # presence check is computed once here and referenced by name below.
+      HAS_RASP_CORE_SNK: ${{ secrets.RASP_CORE_SNK_BASE64 != '' }}
 
     steps:
     - name: Checkout repository
@@ -44,7 +50,22 @@ jobs:
           **/*.targets
 
     - name: Restore dependencies
-      run: dotnet restore ${{ env.SOLUTION_NAME }}
+      # --locked-mode fails the restore if packages.lock.json is out of sync with the actual
+      # dependency graph, instead of silently regenerating it - without this flag, the
+      # committed lock files are advisory only and drift goes unnoticed.
+      run: dotnet restore ${{ env.SOLUTION_NAME }} --locked-mode
+
+    # Public-signing (see src/Rasp.Core/Rasp.Core.csproj) only needs RaspCore.pub, already
+    # committed, so this step is a no-op unless the secret below is configured - it exists
+    # so a future release/publish job can opt into a *really* signed Rasp.Core.dll (whose
+    # signature verifies, not just its public key token) without any other change here.
+    # No release pipeline consumes this yet; wiring `/p:PublicSign=false` into an actual
+    # signed build is deferred until one exists. See docs/ADR/006-sink-instrumentation-strategy.md
+    # addendum point 5 for why a real private key was deliberately kept out of this pass.
+    - name: Provision release signing key (if configured)
+      if: env.HAS_RASP_CORE_SNK == 'true'
+      shell: bash
+      run: echo "${{ secrets.RASP_CORE_SNK_BASE64 }}" | base64 -d > src/Rasp.Core/RaspCore.snk
 
     - name: Build (Release)
       run: dotnet build ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-restore
@@ -84,21 +105,25 @@ jobs:
           **/*.props
 
     - name: Restore
-      run: dotnet restore ${{ env.SOLUTION_NAME }}
+      run: dotnet restore ${{ env.SOLUTION_NAME }} --locked-mode
 
     - name: NuGet Vulnerability Scan
       run: |
         dotnet list ${{ env.SOLUTION_NAME }} package --vulnerable --include-transitive --framework net10.0 > vulnerabilities.txt
         cat vulnerabilities.txt
-        
+
         # Lógica melhorada para detetar Critical (case insensitive)
         if grep -i "Critical" vulnerabilities.txt; then
           echo "::error title=Security Audit::Critical vulnerabilities found in dependencies!"
           exit 1
         fi
-        
+
         if grep -i "High" vulnerabilities.txt; then
           echo "::warning title=Security Audit::High vulnerabilities found. Consider updating."
+        fi
+
+        if grep -i "Moderate" vulnerabilities.txt; then
+          echo "::warning title=Security Audit::Moderate vulnerabilities found. Consider updating."
         fi
 
     - name: Build for Generators
@@ -117,3 +142,89 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
+
+  native-profiler-build:
+    name: Native Profiler Build (MSVC)
+    runs-on: windows-latest
+    # src/Rasp.Native.Profiler is not part of Rasp.sln; this job builds it with MSVC
+    # (the primary toolchain per src/Rasp.Native.Profiler/README.md).
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup MSVC Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1
+
+    # CodeQL for the native profiler: this repo's only SAST-covered C++, since
+    # LoadLibraryW-driven chaining, IL rewriting, and raw metadata parsing live here.
+    # build-mode: manual because the actual build happens via the CMake steps below, not an
+    # autodetected build system.
+    - name: Initialize CodeQL (cpp)
+      uses: github/codeql-action/init@v3
+      with:
+        languages: cpp
+        build-mode: manual
+
+    - name: Configure (CMake + Ninja, ASan/UBSan on)
+      run: cmake -S src/Rasp.Native.Profiler -B src/Rasp.Native.Profiler/build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DRASP_ENABLE_SANITIZERS=ON
+
+    - name: Build
+      run: cmake --build src/Rasp.Native.Profiler/build
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:cpp"
+
+    - name: Upload built DLL
+      uses: actions/upload-artifact@v4
+      with:
+        name: Rasp.Native.Profiler-dll
+        path: src/Rasp.Native.Profiler/build/*.dll
+        if-no-files-found: error
+
+    # Live-attach smoke test: builds a second, non-sanitized Release DLL (ASan changes the
+    # DLL's ABI/memory layout and isn't representative of what would actually be loaded into
+    # a real host process - see the RASP_ENABLE_SANITIZERS comment in CMakeLists.txt) and
+    # runs the fixture documented in src/Rasp.Native.Profiler/README.md, asserting on its
+    # exit code instead of requiring a human to re-run it and eyeball the output. This does
+    # not replace re-running it by hand after a change to RaspProfiler.cpp/ILRewriter.cpp -
+    # one process lifetime is too short to exercise re-JIT/tiered-compilation edge cases
+    # (see README.md "Last verified") - but it does mean a rewrite that stops propagating
+    # taint entirely no longer ships silently.
+    - name: Configure & build profiler (Release, no sanitizers)
+      run: |
+        cmake -S src/Rasp.Native.Profiler -B src/Rasp.Native.Profiler/build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+        cmake --build src/Rasp.Native.Profiler/build-release
+
+    - name: Setup .NET 10 (for live-attach smoke test)
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        dotnet-quality: 'preview'
+
+    - name: Build live-attach smoke test fixture
+      run: dotnet build src/Rasp.Native.Profiler/SmokeTest/SmokeTest.csproj --configuration Debug
+
+    - name: Run live-attach smoke test
+      shell: pwsh
+      run: |
+        $dll = Get-ChildItem -Path "src/Rasp.Native.Profiler/build-release" -Filter "*.dll" -Recurse | Select-Object -First 1
+        if (-not $dll) { throw "No profiler DLL found under build-release/" }
+        Write-Host "Profiler DLL: $($dll.FullName)"
+
+        $env:CORECLR_ENABLE_PROFILING = "1"
+        $env:CORECLR_PROFILER = "{9c80f47f-0a8f-4f39-8205-4c605c739df7}"
+        $env:CORECLR_PROFILER_PATH = $dll.FullName
+        $env:DOTNET_TieredCompilation = "0"
+
+        dotnet exec src/Rasp.Native.Profiler/SmokeTest/bin/Debug/net10.0/SmokeTest.dll
+        if ($LASTEXITCODE -ne 0) {
+          throw "Live-attach smoke test failed (exit code $LASTEXITCODE) - see src/Rasp.Native.Profiler/README.md"
+        }
