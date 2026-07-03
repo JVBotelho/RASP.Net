@@ -22,9 +22,9 @@
       },
       "Google.Protobuf": {
         "type": "Direct",
-        "requested": "[3.33.5, )",
-        "resolved": "3.33.5",
-        "contentHash": "XEzLpCTosZb5I6eGSPn7rAES0VfkJkn3Cqydh0W39POdZwkdhPhOmAROTFJF9g0ardst4ulNXRm/q/iXwNu+Qw=="
+        "requested": "[3.35.1, )",
+        "resolved": "3.35.1",
+        "contentHash": "pxtkuXhR8svkvDTQrYew9GZQt6eWhblz/V/WKUFrQgkHYlQPsumJTeF6ppHRJpe6j9ffukkd5lQULiiKaek4xA=="
       },
       "Grpc.AspNetCore": {
         "type": "Direct",
@@ -492,7 +492,7 @@
       "rasp.core": {
         "type": "Project",
         "dependencies": {
-          "Google.Protobuf": "[3.33.2, )",
+          "Google.Protobuf": "[3.35.1, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.1, )",
           "Microsoft.Extensions.Diagnostics.Abstractions": "[10.0.1, )",
           "Microsoft.Extensions.Logging": "[10.0.1, )"
