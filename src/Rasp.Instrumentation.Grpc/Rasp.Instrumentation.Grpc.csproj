@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.81.1" />
   </ItemGroup>
 
   <ItemGroup>

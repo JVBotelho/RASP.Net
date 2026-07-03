@@ -13,6 +13,12 @@
           "Grpc.Tools": "2.71.0"
         }
       },
+      "Grpc.Tools": {
+        "type": "Direct",
+        "requested": "[2.81.1, )",
+        "resolved": "2.81.1",
+        "contentHash": "me0a6Xyk4Apw5kL2q6dOTZW8YvPnRHyirfxNwEoXwnVZmzS32BiUJFBYWrYvteH0KtEY4uugih+Go8OvIeptJg=="
+      },
       "Google.Protobuf": {
         "type": "Transitive",
         "resolved": "3.33.2",
@@ -65,11 +71,6 @@
         "dependencies": {
           "Grpc.Core.Api": "2.71.0"
         }
-      },
-      "Grpc.Tools": {
-        "type": "Transitive",
-        "resolved": "2.71.0",
-        "contentHash": "r8zHZm7kHdMrtujnkcuQ0BNDH2969at/8Va1ZzQgVblaQzR7tm8JlA3G+5Z5IFbvvf9PcAr1/VcoSR+g7j4Nyw=="
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "Transitive",
