@@ -288,5 +288,5 @@ dotnet-counters monitor --process-id $(pgrep -f LibrarySystem.Api) \
 
 ---
 
-**Last Updated:** 2025-02-09  
+**Last Updated:** 2026-07-03  
 **For Questions:** Open a [Discussion](https://github.com/JVBotelho/RASP.Net/discussions)

@@ -8,7 +8,7 @@
 
 **DO NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email: **[rasp.net.passerby434@passinbox.com]** with:
+Instead, please email: **[security.mullets599@passinbox.com]** with:
 
 - Description of the vulnerability
 - Steps to reproduce
@@ -34,17 +34,39 @@ This is a **Proof of Concept** with inherent limitations:
 
 ### Intentional Scope Restrictions
 
-1. **No Taint Tracking**: The RASP does not track data flow through variables
-   - **Impact**: Obfuscated attacks may bypass detection
-   - **Mitigation**: Defense-in-depth approach (detect at entry + sink)
+1. **Taint Tracking is v1/Windows-only**: A native CLR profiler propagates a taint bit through
+   `String.Concat(string, string)` only; other string-building patterns (interpolation,
+   `StringBuilder`, `string.Format`) are not yet tracked, and the profiler is Windows-only.
+   - **Impact**: Obfuscated/indirect data flow outside the tracked pattern may bypass taint-based
+     detection
+   - **Mitigation**: Defense-in-depth — detection also runs at the gRPC entrypoint and at each
+     sink (SQL, XSS, SSRF, Path Traversal, Command Injection, Deserialization) independent of taint
 
-2. **Signature-Based Detection**: Uses regex patterns, not behavioral analysis
+2. **Signature/Heuristic-Based Detection**: Uses pattern and heuristic matching, not behavioral
+   or ML-based analysis
    - **Impact**: Novel/zero-day attacks may not be detected
-   - **Mitigation**: Regular pattern updates
+   - **Mitigation**: Regular pattern updates; sink-level ground-truth checks (e.g., path/executable
+     allowlists) don't rely on pattern matching at all
 
-3. **Performance Overhead**: All interception adds latency
-   - **Impact**: ~3-5% throughput reduction in high-load scenarios
-   - **Mitigation**: Benchmarking tools provided
+3. **Performance Overhead**: Sink interception adds latency at each guarded call
+   - **Impact**: Measured overhead is indistinguishable from noise against the real I/O being
+     guarded (file open, process spawn, DB round trip, outbound HTTP) under sustained load — see
+     [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md#measured-end-to-end-latency-under-sustained-load-2026-07-02)
+     for methodology and numbers
+   - **Mitigation**: Benchmarking tools provided; audit mode (`BlockOnDetection = false`) available
+     if inspection cost is a concern for a given deployment
+
+4. **Deserialization guard is a type blocklist, wired to `System.Text.Json` only**: it checks
+   deserialized types against a curated list of ~12 known gadget-chain types, and only
+   `Rasp.Instrumentation.SystemTextJson`'s `JsonTypeInfo` modifier calls it — there's no hook for
+   `BinaryFormatter`, Json.NET with `TypeNameHandling`, `DataContractSerializer`, or `LosFormatter`
+   - **Impact**: A blocklist is bypassable by any gadget type not on the list (e.g. most of
+     `ysoserial.net`'s catalog); the other serializers listed above have no coverage at all if used
+   - **Mitigation**: Don't use `BinaryFormatter` (obsolete/removed in modern .NET) or
+     `TypeNameHandling.All`-style polymorphic deserialization of untrusted input regardless of
+     RASP; the architecturally correct fix — allowlist enforcement via a custom
+     `SerializationBinder` — is listed in [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md)
+     Phase A but not yet implemented
 
 ### Attack Vectors NOT Currently Covered
 
@@ -52,7 +74,12 @@ This is a **Proof of Concept** with inherent limitations:
 - ❌ LDAP Injection
 - ❌ XML External Entity (XXE)
 - ❌ Server-Side Template Injection (SSTI)
-- ⚠️ XSS (Partial: only in gRPC string fields)
+
+### Covered
+
+SQL Injection, XSS, SSRF, Path Traversal, Command Injection, and Insecure Deserialization all
+have dedicated sink-level guards; see [ROADMAP.md](docs/ROADMAP.md) for the current feature
+matrix and per-sink status.
 
 ---
 
@@ -67,52 +94,74 @@ RASP is **not a replacement** for:
 - Web Application Firewalls (WAF)
 - Network segmentation
 
-### 2. Logging and Monitoring
-```csharp
-builder.Services.AddRasp(options =>
-{
-    options.EnableDetailedLogging = true; // ⚠️ May log sensitive data
-    options.BlockMode = true; // false = monitor-only mode
-});
-```
+### 2. Don't swallow `RaspSecurityException`
+Every guard blocks by throwing `Rasp.Core.Exceptions.RaspSecurityException` (deliberately not
+derived from `DbException`, so EF Core doesn't treat a block as a transient fault and retry it).
+That also means the block only takes effect if the exception is allowed to propagate: a broad
+`catch (Exception)` around a query, file operation, or process call in application code will
+silently swallow the block and let the request continue. This is an inherent property of any
+throw-to-block RASP, not something RASP.Net can enforce from inside the process — treat "don't
+catch `RaspSecurityException`" as a deployment requirement, the same way you'd treat "don't catch
+`OperationCanceledException` and continue" for cancellation.
 
-**Warning**: Detailed logging may capture sensitive data in payloads. Ensure logs are secured.
-
-### 3. False Positive Handling
-Add legitimate patterns to allowlist:
+### 3. Logging and Monitoring
+`AddRasp` reads options from configuration, not a delegate. In `appsettings.json`:
 ```json
 {
   "Rasp": {
-    "Allowlist": {
-      "Patterns": [
-        "SELECT * FROM Users WHERE Name = 'O''Reilly'"
-      ]
-    }
+    "BlockOnDetection": true,
+    "EnableMetrics": true
+  }
+}
+```
+```csharp
+builder.Services.AddRasp(builder.Configuration);
+```
+Set `BlockOnDetection` (and the per-engine `BlockOnAdoNetDetection` / `BlockOnSsrfDetection` /
+`BlockOnRuntimePatchingDetection`) to `false` for audit/monitor-only mode. See
+[`RaspOptions`](src/Rasp.Core/Configuration/RaspOptions.cs) for the full set of options.
+
+**Warning**: Metrics/logging emitted at detection points may include the offending payload
+snippet. Ensure logs are secured.
+
+### 4. Scoping File and Process Access
+`AllowedFileRoots` and `AllowedProcesses` gate the Phase B runtime-patching guards
+(Path Traversal / Command Injection). Note the defaults are asymmetric by design: an empty
+`AllowedFileRoots` fails **open** (no path check), while an empty `AllowedProcesses` fails
+**closed** (no process may start) — see the XML docs on those properties for the reasoning.
+```json
+{
+  "Rasp": {
+    "AllowedFileRoots": ["/var/app/data"],
+    "AllowedProcesses": ["/usr/bin/git"]
   }
 }
 ```
 
-### 4. Regular Updates
-```bash
-# Check for updates
-dotnet list package --outdated
-
-# Update RASP packages
-dotnet add package Rasp.Core --version 1.x.x
-```
+### 5. Package Source
+RASP.Net is not yet published to NuGet.org — build and reference the packages from source, or
+use the local packing scripts (`scripts/pack-local.ps1` / `.sh`) described in
+[CHEATSHEET.md](docs/CHEATSHEET.md). See [ROADMAP.md](docs/ROADMAP.md) for NuGet publishing status.
 
 ---
 
 ## 🧪 Responsible Disclosure Examples
 
-### Example 1: Bypass via Encoding
-**Vulnerability**: URL-encoded payloads bypass gRPC interceptor
+The examples below illustrate the report format we're looking for (issue → repro → suggested
+fix), not open vulnerabilities. Example 1 describes a gap that has since been closed — the XSS
+engine now multi-pass decodes URL encoding, HTML entities, and Unicode escapes before pattern
+matching (see [ADR 005](docs/ADR/005-xss-engine.md)) — kept here as a template for what a good
+report looks like.
+
+### Example 1: Bypass via Encoding (historical — fixed)
+**Vulnerability**: URL-encoded payloads bypassed inspection because decoding happened after
+pattern matching instead of before.
 ```python
 payload = urllib.parse.quote("' OR '1'='1")
-# RASP doesn't decode before inspection
 ```
 
-**Fix**: Add URL decoding before pattern matching
+**Fix**: Decode (URL, HTML entity, Unicode escape) before pattern matching, bounded by a
+decode-pass budget to avoid ReDoS-style amplification.
 
 ### Example 2: Performance DoS
 **Vulnerability**: Complex regex causes ReDoS

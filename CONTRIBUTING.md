@@ -179,7 +179,10 @@ When reporting bugs, please provide:
 
 ## ⚠️ Common Pitfalls
 
-These patterns will require revision before merge:
+1. **Branching**: Create your feature branch from `develop`. The `main` branch is reserved for stable releases.
+2. **Draft PRs**: We encourage opening a **Draft PR** early in the process to discuss architectural decisions before finalizing the code.
+3. **Code Quality**: Ensure [CodeQL](https://codeql.github.com/) scans pass without new security alerts.
+4. **ADR Updates**: If your PR introduces structural changes, please update or create a new **ADR (Architecture Decision Record)** in the `docs/ADR` folder.
 
 | Anti-Pattern | Why It's Problematic | Better Alternative |
 |--------------|---------------------|-------------------|

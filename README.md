@@ -36,6 +36,8 @@
 
 ## ⚡ Performance Benchmarks
 
+### Perimeter scan: Source Generator vs. Reflection
+
 **Methodology:** `BenchmarkDotNet` comparing Source Generator (compile-time) vs Reflection (runtime) instrumentation.  
 **Hardware:** AMD Ryzen 7 7800X3D | **Runtime:** .NET 10.0.2 (RyuJIT AVX-512)
 
@@ -50,6 +52,29 @@
 > * **10x Faster Hot Path:** Source-generated interceptors eliminate runtime reflection overhead, critical for high-throughput game servers
 > * **Sub-Microsecond Latency:** Clean traffic passes through in **~109 nanoseconds**—invisible
 > * **SIMD Optimization:** Uses `SearchValues<T>` for vectorized character scanning before deep inspection
+
+### Sink overhead under sustained load (RASP on vs. off)
+
+**Methodology:** real Kestrel host, real backends (Postgres via Testcontainers, real subprocess, real
+outbound HTTP), 25 concurrent workers sustained for 20s per endpoint. Not a synthetic `Inspect()`
+call in isolation — these are p50/p99 request latencies with the entire sink wired in or fully
+absent. Full methodology and per-guard micro-benchmarks in [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md#measured-end-to-end-latency-under-sustained-load-2026-07-02).
+
+| Sink | RASP off (p50 / p99) | RASP on (p50 / p99) | Verdict |
+|:-----|----------------------:|----------------------:|:--------|
+| Path Traversal (`FileStream`) | 851 µs / 1349 µs | 858 µs / 1404 µs | indistinguishable from noise |
+| Command Injection (`Process.Start`) | 60.76 ms / 108.22 ms | 61.50 ms / 104.59 ms | indistinguishable from noise |
+| SQL (EF Core → Postgres) | 7.76 ms / 16.97 ms | 7.50 ms / 16.50 ms | indistinguishable from noise |
+| SSRF (`HttpClient`) | 299 µs / 756 µs | 306 µs / 914 µs | indistinguishable from noise |
+
+> **Key Insight:** RASP's own cost never surfaces above the real I/O it's guarding — a file open, a
+> process spawn, a database round trip, or an outbound HTTP call already costs orders of magnitude
+> more than the guard's inspection. SSRF's guard has a real DNS-rebinding check
+> (`SocketsHttpHandler.ConnectCallback`), but connection pooling means it fires roughly once per
+> pooled connection, not once per request — see
+> [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md#ssrf-dns-cache-raspoptionsssrfdnscacheduration--investigation-and-honest-result)
+> for why that makes an opt-in DNS cache redundant in exactly the traffic pattern where it's safe
+> to use.
 
 ---
 
@@ -206,11 +231,98 @@ False Positives:  ✅ 0
 
 ## 🎯 Roadmap
 
-- [x] **Phase 1**: Composite solution setup & vulnerability injection
-- [x] **Phase 2**: gRPC Interceptor with XSS/SQLi detection
-- [x] **Phase 3**: Source Generator for zero-config integration
-- [ ] **Phase 4**: EF Core Interceptor with SQL analysis 🚧
-- [ ] **Phase 5**: Native anti-tamper layer
+Sequenced for the project's goal: a production-grade OSS RASP for the .NET ecosystem, submitted
+to OWASP (Incubator → Lab) and — once packages are published and community traction exists — to
+the .NET Foundation. Adoption infrastructure (Stages 1–2) deliberately comes before new detection
+features (Stage 3): a security product nobody can `dotnet add package` is a repository, not a product.
+
+### ✅ Shipped — the foundation
+
+- [x] Composite solution setup & vulnerability injection
+- [x] gRPC Interceptor with XSS/SQLi detection
+- [x] Source Generator for zero-config integration
+- [x] EF Core Interceptor with SQL analysis
+- [x] Native anti-tamper layer ([ADR 003](docs/ADR/003-native-integrity-guard.md) — Windows shipped, Linux planned)
+- [x] Sink-centric pivot: SQL / SSRF / Path Traversal / Command Injection / Deserialization guards ([ADR 006](docs/ADR/006-sink-instrumentation-strategy.md) Phases A & B)
+- [x] CLR Profiler + taint tracking ([ADR 006](docs/ADR/006-sink-instrumentation-strategy.md) Phase C — v1 scope: `String.Concat(string, string)` propagation)
+- [x] Ambient execution context: correlated source → sink alerts ([ADR 007](docs/ADR/007-execution-context.md))
+
+### 📦 Stage 1 — Ship it as a product (NuGet)
+
+Starts once ADRs 006/007 are finalized and merged.
+
+- [ ] **NuGet packages** for the managed SDK. The cross-platform, supported-API core
+      (ADR 006 Phase A guards + the ADR 007 context layer) is the installable product;
+      MonoMod runtime patching (Phase B) stays opt-in; the CLR profiler (Phase C) ships
+      separately as a Windows-only advanced preview.
+- [ ] **Multi-target `net8.0;net10.0`** so both supported LTS lines can adopt.
+- [ ] **SemVer + release pipeline** — versioned, signed packages (the CI signing hook is
+      already wired; see [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md) addendum point 5).
+
+### 🌐 Stage 2 — OWASP Incubator submission
+
+Before submitting:
+
+- [ ] Community baseline: `CODE_OF_CONDUCT.md`, issue templates, `GOVERNANCE.md`,
+      `good-first-issue` backlog (taint-propagation targets are ideal starter issues).
+- [ ] Isolate and clearly label the intentionally-vulnerable demo target (`modules/`) so its
+      known-vulnerable packages are never mistaken for product dependencies.
+- [ ] **Recruit a second project leader** — current OWASP policy requires multiple leaders
+      (not all from the same employer), so this gates the application itself.
+- [ ] Start the [OSSF Best Practices](https://www.bestpractices.dev/) self-certification —
+      a Lab-promotion criterion that is cheap to begin early.
+- [ ] Draft the OWASP project-page content (`index.md`, description, roadmap) in advance —
+      the `www-project-rasp-net` repo itself is provisioned by the OWASP Foundation under
+      `github.com/OWASP` only **after** acceptance; having content ready means the page goes
+      live immediately instead of sitting empty.
+- [ ] Submit as an [OWASP Incubator project](https://owasp.org/projects/) — the MIT license,
+      vendor neutrality, [threat model](docs/ATTACK_SCENARIOS.md) and [SECURITY.md](SECURITY.md)
+      already meet the entry bar.
+
+After acceptance:
+
+- [ ] Transfer this repository to `github.com/OWASP` (GitHub preserves stars/issues/history and
+      redirects old URLs), re-create Actions secrets, repoint badges and Codecov.
+- [ ] Populate `www-project-rasp-net` with the drafted page content and keep it current —
+      stale project pages are what gets OWASP projects flagged inactive.
+
+### 🛡️ Stage 3 — [OWASP Top 10 (2025)](https://owasp.org/Top10/2025/) coverage (feature track)
+
+The main feature track once the product is installable — closing the ⬜ rows below is what
+drives Incubator → Lab progression.
+
+A sink-based RASP is a natural fit for the injection/integrity/exception-handling families and a
+poor fit for categories that are really about access-control policy, cryptography, or supply
+chain — mapping kept honest rather than padded. Note the 2025 edition folded SSRF (CWE-918) into
+**A01 Broken Access Control** rather than keeping it a standalone category, and added
+**A10 Mishandling of Exceptional Conditions**, a much more precise fit for the deferred Lean
+Sentinel work than the 2021 edition's A04/A09 had been:
+
+| Category | Coverage | Mechanism |
+|:---|:---|:---|
+| **A01 Broken Access Control** (SSRF — CWE-918, Path Traversal) | ✅ Done | `SsrfGuard` (DNS-rebinding-safe `HttpClient` handler, [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md)), `PathTraversalGuard` (MonoMod). The rest of A01 — IDOR, JWT/session handling, CORS — is access-control *policy*, not a sink a RASP can validate. |
+| **A02 Security Misconfiguration** (headers) | ✅ Done | `RaspSecurityHeadersMiddleware` (CSP, etc.) |
+| **A02 / A05 XXE** (`XmlReader` / `XmlDocument.Load`) | ⬜ Planned | policy guard disabling DTD/external entities (MonoMod) |
+| **A05 Injection** (SQLi, XSS, Command Injection) | ✅ Done | `SqlSinkGuard`, source-generated XSS/SQLi scan, `CommandInjectionGuard` (MonoMod) |
+| **A05 Injection** (LDAP Injection — `DirectorySearcher`) | ⬜ Planned | new `LdapInjectionDetectionEngine` (MonoMod) |
+| **A08 Software or Data Integrity Failures** (insecure deserialization) | ✅ Done | `DeserializationGuard` + `System.Text.Json` type-info modifier |
+| **A09 Security Logging & Alerting Failures** | ✅ Done | `RaspAlertBus`, correlated structured alerts ([ADR 007](docs/ADR/007-execution-context.md)), audit mode, metrics |
+| **A10 Mishandling of Exceptional Conditions** (error messages/stack traces leaking system detail) | ⬜ Deferred | Lean Sentinel ([ADR 004](docs/ADR/004-memory-disclosure-protection.md) — accepted, implementation deferred) |
+| A03 (Software Supply Chain), A04 (Cryptographic Failures), A06 (Insecure Design), A07 (Authentication Failures) | Out of scope | Dependency/CI-CD integrity, cryptography, architecture-level design review, and authentication are a different tooling category than a sink-based RASP; deliberately not attempted here. |
+
+### 🔭 Stage 4 — Depth, platform reach, foundation
+
+- [ ] **Widen taint propagation** beyond `String.Concat(string, string)`: `string.Format`,
+      interpolation lowering, `Substring`, `StringBuilder` — the gap [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md)
+      documents as v1's accepted limitation.
+- [ ] **Native test harness + Linux profiler port** — the IL rewriter currently has only a smoke
+      test, and the profiler build is Windows-only (the non-Windows PAL scaffolding already exists
+      in `profiler_pal.h`). Linux is where most ASP.NET Core production runs; this is what removes
+      the "Windows-only advanced preview" label from Phase C.
+- [ ] **Linux native integrity parity** (eBPF-based monitoring, [ADR 003](docs/ADR/003-native-integrity-guard.md)).
+- [ ] **.NET Foundation application** — once packages are published, adoption signals exist, and
+      the maintainer bus factor is above one. The Foundation works as a maturity seal, not a
+      launch lever; applying before that is premature by its own admission criteria.
 
 ---
 

@@ -1,4 +1,4 @@
-﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Attributes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -9,6 +9,7 @@ using Rasp.Core.Infrastructure;
 using Rasp.Instrumentation.Grpc.Interceptors;
 using Rasp.Benchmarks.Models;
 using Rasp.Benchmarks.Stubs;
+using Rasp.Core.Telemetry;
 
 // using Rasp.Benchmarks.Stubs; 
 
@@ -59,13 +60,14 @@ public class DeepNestingBenchmark : IDisposable
             catch (OperationCanceledException) { }
         });
 
+        var opts = Options.Create(new RaspOptions { BlockOnDetection = true });
+        var metrics = new DummyRaspMetrics();
         // 2. Interceptors
-        _sourceGenInterceptor = new DeepTargetServiceRaspInterceptor(xssEngine, sqlEngine, _alertBus);
+        _sourceGenInterceptor = new DeepTargetServiceRaspInterceptor(xssEngine, sqlEngine, _alertBus, metrics, opts);
 
         var reflectionInspector = new RecursiveReflectionInspector();
-        var opts = Options.Create(new RaspOptions());
         var composite = new CompositeDetectionEngine(sqlEngine, xssEngine);
-        _reflectionInterceptor = new SecurityInterceptor(composite, reflectionInspector, opts, NullLogger<SecurityInterceptor>.Instance);
+        _reflectionInterceptor = new SecurityInterceptor(composite, reflectionInspector, opts, metrics, _alertBus, NullLogger<SecurityInterceptor>.Instance);
 
         // 3. CLEAN REQUEST (15 Níveis, Payload Seguro no fundo)
         _cleanRequest = BuildChain(15, safe: true);

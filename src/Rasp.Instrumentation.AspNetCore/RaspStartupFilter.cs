@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Rasp.Instrumentation.AspNetCore.Middleware;
@@ -17,6 +17,9 @@ public sealed class RaspStartupFilter : IStartupFilter
     {
         return app =>
         {
+            // Establish the Context first so that any downstream middleware benefits from provenance
+            app.UseMiddleware<RaspContextMiddleware>();
+
             app.UseMiddleware<RaspSecurityHeadersMiddleware>();
 
             next(app);

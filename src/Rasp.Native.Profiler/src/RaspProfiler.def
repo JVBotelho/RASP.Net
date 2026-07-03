@@ -1,0 +1,5 @@
+LIBRARY "Rasp.Native.Profiler"
+
+EXPORTS
+    DllCanUnloadNow PRIVATE
+    DllGetClassObject PRIVATE

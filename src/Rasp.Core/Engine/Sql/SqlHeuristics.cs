@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 namespace Rasp.Core.Engine.Sql;
 
@@ -25,18 +25,28 @@ internal static class SqlHeuristics
         "waitfor delay"
     ];
 
-    // Contextual patterns: Specific sequences targeting quote breakouts.
-    // We prioritize these checks to solve the "O'Reilly" false positive problem:
-    // we only flag quotes that are immediately followed by SQL syntax.
     private static readonly string[] ContextualPatterns =
     [
-        "' or",   // Tautology: admin' OR '1'='1
-        "' and",  // Tautology: admin' AND 1=1
-        "'=",     // Arithmetic Tautology: '1'='1'
-        "';",     // Query Stacking: '; DROP TABLE
-        "--",     // Comment Truncation
-        "/*"      // Inline Comment
+        "' or",
+        "' and",
+        "'or ",
+        "'and ",
+        "\" or",
+        "\" and",
+        "\"or ",
+        "\"and ",
+        "'=",
+        "\"=",
+        "';",
+        "--",
+        "/*"
     ];
+
+    private static readonly System.Buffers.SearchValues<string> _highRiskSearchValues =
+        System.Buffers.SearchValues.Create(HighRiskTokens, StringComparison.OrdinalIgnoreCase);
+
+    private static readonly System.Buffers.SearchValues<string> _contextualSearchValues =
+        System.Buffers.SearchValues.Create(ContextualPatterns, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Analyzes the input for SQL injection patterns.
@@ -51,26 +61,15 @@ internal static class SqlHeuristics
     public static double CalculateScore(ReadOnlySpan<char> normalizedInput)
     {
         // 1. Contextual Pattern Analysis (High Confidence, Low False Positives)
-        // We check these first because they represent the most common attack vectors (tautologies).
-        // By looking for context (e.g., quote + operator), we avoid blocking names like "O'Reilly".
-        foreach (var pattern in ContextualPatterns)
+        if (normalizedInput.ContainsAny(_contextualSearchValues))
         {
-            // Note: In .NET 9+, this loop could be replaced by SearchValues<string> for SIMD acceleration.
-            // For now, linear scanning is acceptable as it remains Zero-Alloc.
-            if (normalizedInput.Contains(pattern.AsSpan(), StringComparison.Ordinal))
-            {
-                return CriticalThreat;
-            }
+            return CriticalThreat;
         }
 
         // 2. High-Risk Token Analysis (Structural Keywords)
-        // These tokens (UNION, DROP) are extremely rare in legitimate user input.
-        foreach (var token in HighRiskTokens)
+        if (normalizedInput.ContainsAny(_highRiskSearchValues))
         {
-            if (normalizedInput.Contains(token.AsSpan(), StringComparison.Ordinal))
-            {
-                return CriticalThreat;
-            }
+            return CriticalThreat;
         }
 
         return Safe;

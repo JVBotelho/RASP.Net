@@ -11,7 +11,20 @@
     <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <NoWarn>$(NoWarn);CA1515;CA1707;CA1822</NoWarn>
+    <!-- CS8002 (referencing unsigned assemblies) is expected here: Rasp.Benchmarks itself
+         is deliberately left unsigned (it isn't shipped and doesn't use any Rasp.Core
+         internal member, so it doesn't need the InternalsVisibleTo friend grant that
+         forced Rasp.Core.Tests to be signed - see src/Rasp.Core/InternalsVisibleTo.cs).
+         Signing it too would cascade strong-naming into third-party/submodule
+         dependencies (LibrarySystem.Contracts under modules/) for no security benefit. -->
+    <NoWarn>$(NoWarn);CA1515;CA1707;CA1822;CS8002</NoWarn>
+    <!-- NU1903 (SQLitePCLRaw.lib.e_sqlite3 advisory, transitive via Microsoft.EntityFrameworkCore.Sqlite,
+         pulled in only to exercise the real EF Core sink in SqlSinkBenchmarks) is a build-breaking
+         WarningAsError under src/Directory.Build.props. Same non-shipped/unsigned rationale as the
+         CS8002 suppression above applies - this package is never shipped, only used to benchmark the
+         RaspDbCommandInterceptor pipeline against a real SQLite connection. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1903</WarningsNotAsErrors>
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +35,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,13 +50,17 @@
 
     <ProjectReference Include="..\Rasp.Instrumentation.Grpc\Rasp.Instrumentation.Grpc.csproj" />
 
-    <ProjectReference Include="..\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false">
+    <ProjectReference Include="..\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false">
       <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
       <UndefineProperties>TargetFramework</UndefineProperties>
     </ProjectReference>
+
+    <ProjectReference Include="..\Rasp.Instrumentation.RuntimePatching\Rasp.Instrumentation.RuntimePatching.csproj" />
+
+    <ProjectReference Include="..\Rasp.Instrumentation.EntityFrameworkCore\Rasp.Instrumentation.EntityFrameworkCore.csproj" />
+
+    <ProjectReference Include="..\Rasp.Instrumentation.HttpClient\Rasp.Instrumentation.HttpClient.csproj" />
   </ItemGroup>
 
 </Project>

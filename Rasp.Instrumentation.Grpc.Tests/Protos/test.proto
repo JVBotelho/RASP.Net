@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option csharp_namespace = "Rasp.Instrumentation.Grpc.Tests.Protos";
+
+service ComplexTestService {
+  rpc SendComplex (ComplexRequest) returns (ComplexResponse);
+}
+
+message ComplexRequest {
+  repeated string tags = 1;
+  NestedMessage nested = 2;
+}
+
+message NestedMessage {
+  string internal_notes = 1;
+}
+
+message ComplexResponse {
+  bool success = 1;
+}
