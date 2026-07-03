@@ -5,10 +5,14 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
-        <!-- Must be strong-named to be a valid InternalsVisibleTo friend of the
-             strong-named Rasp.Core (see src/Rasp.Core/InternalsVisibleTo.cs). -->
+        <!-- Must carry the same public key token as Rasp.Core to be a valid
+             InternalsVisibleTo friend (see src/Rasp.Core/InternalsVisibleTo.cs). PublicSign
+             against the committed RaspCore.pub yields that token without the private
+             RaspCore.snk (gitignored, not present in CI) - same approach as
+             src/Rasp.Core/Rasp.Core.csproj. -->
         <SignAssembly>true</SignAssembly>
-        <AssemblyOriginatorKeyFile>..\src\Rasp.Core\RaspCore.snk</AssemblyOriginatorKeyFile>
+        <PublicSign>true</PublicSign>
+        <AssemblyOriginatorKeyFile>..\src\Rasp.Core\RaspCore.pub</AssemblyOriginatorKeyFile>
     </PropertyGroup>
 
     <ItemGroup>

@@ -108,8 +108,12 @@ jobs:
       run: dotnet restore ${{ env.SOLUTION_NAME }} --locked-mode
 
     - name: NuGet Vulnerability Scan
+      # No --framework pin: the solution mixes net10.0 projects with
+      # Rasp.SourceGenerators (netstandard2.0, required for a Roslyn source generator),
+      # and dotnet list fails outright if the pinned TFM doesn't exist in every project -
+      # letting each project resolve against its own TFM(s) covers all of them instead.
       run: |
-        dotnet list ${{ env.SOLUTION_NAME }} package --vulnerable --include-transitive --framework net10.0 > vulnerabilities.txt
+        dotnet list ${{ env.SOLUTION_NAME }} package --vulnerable --include-transitive > vulnerabilities.txt
         cat vulnerabilities.txt
 
         # Lógica melhorada para detetar Critical (case insensitive)
@@ -210,7 +214,12 @@ jobs:
         dotnet-quality: 'preview'
 
     - name: Build live-attach smoke test fixture
-      run: dotnet build src/Rasp.Native.Profiler/SmokeTest/SmokeTest.csproj --configuration Debug
+      # -p:Platform=AnyCPU overrides the `Platform=x64` environment variable left behind by
+      # the earlier "Setup MSVC Developer Command Prompt" step (ilammy/msvc-dev-cmd sets it
+      # for vcvarsall.bat) - an SDK-style csproj folds an inherited $(Platform) into the
+      # output path (bin/x64/Debug/net10.0/ instead of bin/Debug/net10.0/), which is silent
+      # and doesn't reproduce locally without that dev-prompt env active.
+      run: dotnet build src/Rasp.Native.Profiler/SmokeTest/SmokeTest.csproj --configuration Debug -p:Platform=AnyCPU
 
     - name: Run live-attach smoke test
       shell: pwsh
@@ -219,12 +228,20 @@ jobs:
         if (-not $dll) { throw "No profiler DLL found under build-release/" }
         Write-Host "Profiler DLL: $($dll.FullName)"
 
+        # Resolved via Get-ChildItem under bin/ (not a hardcoded bin/Debug/net10.0/ path):
+        # even with -p:Platform=AnyCPU above, searching from bin/ rather than bin/Debug/
+        # means a future platform/RID-subfolder quirk fails loudly with the message below
+        # instead of silently ("The application to execute does not exist").
+        $smokeTestDll = Get-ChildItem -Path "src/Rasp.Native.Profiler/SmokeTest/bin" -Filter "SmokeTest.dll" -Recurse | Select-Object -First 1
+        if (-not $smokeTestDll) { throw "SmokeTest.dll not found under SmokeTest/bin/ - did the 'Build live-attach smoke test fixture' step succeed?" }
+        Write-Host "SmokeTest fixture: $($smokeTestDll.FullName)"
+
         $env:CORECLR_ENABLE_PROFILING = "1"
         $env:CORECLR_PROFILER = "{9c80f47f-0a8f-4f39-8205-4c605c739df7}"
         $env:CORECLR_PROFILER_PATH = $dll.FullName
         $env:DOTNET_TieredCompilation = "0"
 
-        dotnet exec src/Rasp.Native.Profiler/SmokeTest/bin/Debug/net10.0/SmokeTest.dll
+        dotnet exec $smokeTestDll.FullName
         if ($LASTEXITCODE -ne 0) {
           throw "Live-attach smoke test failed (exit code $LASTEXITCODE) - see src/Rasp.Native.Profiler/README.md"
         }
