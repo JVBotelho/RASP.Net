@@ -8,12 +8,17 @@ This document analyzes the anti-debugging mechanisms implemented in `Rasp.Native
 
 ## 2. Current Implementation Analysis (Layer 0)
 
-The current version (v1.0) relies on standard Win32 APIs to detect the presence of a debugger.
+The current version relies on standard Win32 APIs plus a CPU-timing check, all live in
+`Rasp.Native.Guard/Guard.cpp`'s `CheckEnvironment()`.
 
 | Technique | API Used | Detection Vector | Effectiveness |
 | :--- | :--- | :--- | :--- |
 | **PEB Flag** | `IsDebuggerPresent()` | Checks `PEB.BeingDebugged` byte. | 🟢 Low (Filters Script Kiddies) |
 | **Debug Port** | `CheckRemoteDebuggerPresent()` | Checks for debug port attachment. | 🟡 Medium (Detects Managed Debuggers) |
+| **Timing Anomaly** | `QueryPerformanceCounter()` | Flags a tight loop taking >500µs, indicating single-stepping/hooking overhead. | 🟡 Medium (Detects interactive debugging) |
+
+`CheckExceptionHandler()` (SEH-based detection, see §4.2) is implemented in `Guard.cpp` but
+**disabled by default** — commented out to avoid false positives in some CI environments.
 
 ### 🔍 Self-Critique
 While effective against casual attempts, these checks are **trivial to bypass** for an experienced Reverse Engineer. They serve as a "speed bump", not a wall.
@@ -35,18 +40,18 @@ The Process Environment Block (PEB) is a user-mode data structure writable by th
 
 ---
 
-## 4. Advanced Detection Roadmap (Phase 2)
+## 4. Heuristic Detections (Beyond OS Flags)
 
-To counter the bypasses above, Phase 2 will implement **heuristic detections** that are harder to spoof because they rely on CPU behavior rather than OS flags.
+To counter the bypasses above, these detections rely on CPU behavior rather than OS flags. 4.1 is
+implemented and active; 4.2 is implemented but disabled by default (see §2).
 
-### 4.1. Timing Attacks (RDTSC / QPC)
+### 4.1. Timing Attacks (RDTSC / QPC) — Implemented
 **Theory:** Debuggers introduce significant latency when single-stepping or handling debug events. The CPU clock cannot be easily paused by user-mode debuggers.
 
-**Implementation Strategy:**
-Measure the CPU cycles consumed by a block of code. If the delta is suspiciously high, a debugger is likely interrupting the thread.
+**Implementation:**
+Measures the CPU cycles consumed by a block of code. If the delta is suspiciously high, a debugger is likely interrupting the thread. Live in `Guard.cpp`:
 
 ```cpp
-// Prototype for Guard.cpp v2
 bool CheckTimingAnomaly() {
     LARGE_INTEGER start, end, freq;
     QueryPerformanceFrequency(&freq);
@@ -66,11 +71,11 @@ bool CheckTimingAnomaly() {
 }
 ```
 
-### 4.2 Exception-Based Detection (SEH)
+### 4.2 Exception-Based Detection (SEH) — Implemented, disabled by default
 
 **Theory:** Debuggers intercept exceptions (like INT 3 or DBG_CONTROL_C) before the application's Structured Exception Handler (SEH) sees them.
 
-**Implementation Strategy:** Raise a specific exception. If our __except block is NOT executed, it means a debugger swallowed the exception.
+**Implementation:** Raise a specific exception. If our __except block is NOT executed, it means a debugger swallowed the exception. Present in `Guard.cpp` as `CheckExceptionHandler()`, commented out of the `CheckEnvironment()` call chain to avoid false positives in some CI environments.
 
 ```cpp
 __try {

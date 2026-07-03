@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using Rasp.Core.Abstractions;
 using Rasp.Core.Engine.Xss;
@@ -48,7 +48,7 @@ public sealed class XssDetectionEngine : IDetectionEngine
 
         char[]? pooledObj = null;
         Span<char> buffer = payload.Length <= 1024
-            ? stackalloc char[1024]
+            ? stackalloc char[payload.Length]
             : (pooledObj = ArrayPool<char>.Shared.Rent(payload.Length)).AsSpan(0, payload.Length);
 
         try

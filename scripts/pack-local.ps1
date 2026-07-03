@@ -38,7 +38,7 @@ if (-not $ScriptDir) {
 $RepoRoot = Split-Path -Parent $ScriptDir
 $SrcDir = Join-Path $RepoRoot "src"
 $LocalPackagesDir = Join-Path $RepoRoot "local-packages"
-$NuGetConfigPath = Join-Path $RepoRoot "modules" "nuget.config"
+$NuGetConfigPath = Join-Path (Join-Path $RepoRoot "modules") "nuget.config"
 
 Write-Host "====================================" -ForegroundColor Cyan
 Write-Host " RASP.Net Local Package Builder" -ForegroundColor Cyan
@@ -65,12 +65,13 @@ $Projects = @(
     "Rasp.SourceGenerators",
     "Rasp.Instrumentation.Grpc",
     "Rasp.Instrumentation.AspNetCore",
+    "Rasp.Instrumentation.EntityFrameworkCore",
     "Rasp.Bootstrapper"
 )
 
 # Build and pack each project
 foreach ($project in $Projects) {
-    $projectPath = Join-Path $SrcDir $project "$project.csproj"
+    $projectPath = Join-Path (Join-Path $SrcDir $project) "$project.csproj"
     
     if (-not (Test-Path $projectPath)) {
         Write-Host "[!] Project not found: $projectPath" -ForegroundColor Yellow
@@ -141,7 +142,7 @@ if (-not (Test-Path $NuGetConfigPath)) {
     Write-Host "[i] nuget.config already exists in modules/" -ForegroundColor Yellow
 }
 
-$TargetProj = Join-Path $RepoRoot "modules" "dotnet-grpc-library-api" "LibrarySystem.Grpc" "LibrarySystem.Grpc.csproj"
+$TargetProj = Join-Path (Join-Path (Join-Path (Join-Path $RepoRoot "modules") "dotnet-grpc-library-api") "LibrarySystem.Grpc") "LibrarySystem.Grpc.csproj"
 
 if (Test-Path $TargetProj) {
     Write-Host ""

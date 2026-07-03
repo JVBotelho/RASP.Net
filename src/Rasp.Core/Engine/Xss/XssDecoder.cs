@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 // ReSharper disable MergeIntoPattern
 
@@ -9,7 +9,6 @@ namespace Rasp.Core.Engine.Xss;
 /// </summary>
 internal static class XssDecoder
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int PerformUnsafeDecodePass(Span<char> span, out bool changed)
     {
         int read = 0;

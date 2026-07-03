@@ -15,11 +15,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\Rasp.Native.Guard\Rasp.Native.Guard.dll">
+    <!-- Conditional on the prebuilt DLL actually being present: NativeGuard.cs already
+         degrades gracefully at runtime (catch DllNotFoundException -> managed-only mode)
+         when this native component isn't deployed, and the build must degrade the same
+         way - an unconditional <None Include> makes CopyToOutputDirectory a hard build
+         error (MSB3030) the moment the binary isn't checked in or built locally. -->
+    <None Include="..\Rasp.Native.Guard\Rasp.Native.Guard.dll" Condition="Exists('..\Rasp.Native.Guard\Rasp.Native.Guard.dll')">
       <Link>Rasp.Native.Guard.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Pack>true</Pack>

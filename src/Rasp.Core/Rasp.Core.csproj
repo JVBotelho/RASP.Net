@@ -5,6 +5,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Version>1.0.5-elite</Version>
+    <!-- Strong-named (public-sign, not a real key-pair signature) so Rasp.Native.Profiler
+         can pin the AssemblyRef it emits for RaspTaintSensor by public key token instead of
+         resolving by simple name alone - see docs/ADR/006-sink-instrumentation-strategy.md
+         addendum point 5. PublicSign only needs the .pub file (no private key), so a normal
+         dev build never touches RaspCore.snk (gitignored) - only a release build that
+         injects the real private key via CI secret produces an assembly whose signature
+         actually verifies; the public key / token stays identical either way, since both
+         reference the same key pair. See docs/ADR/006-sink-instrumentation-strategy.md
+         addendum point 5 for why this two-step (public-sign now, real signing key in CI
+         later, Authenticode as the eventual primary control) sequencing was chosen. -->
+    <SignAssembly>true</SignAssembly>
+    <PublicSign>true</PublicSign>
+    <AssemblyOriginatorKeyFile>RaspCore.pub</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -141,9 +141,14 @@ public class RaspGrpcGenerator : IIncrementalGenerator
                         #nullable enable
                         using System;
                         using System.Buffers;
+                        using System.Diagnostics;
                         using System.Threading.Tasks;
                         using Grpc.Core;
                         using Grpc.Core.Interceptors;
+                        using Microsoft.Extensions.Options;
+                        using Rasp.Core.Abstractions;
+                        using Rasp.Core.Configuration;
+                        using Rasp.Core.Context;
                         using Rasp.Core.Engine;
                         using Rasp.Core.Infrastructure;
 
@@ -155,6 +160,9 @@ public class RaspGrpcGenerator : IIncrementalGenerator
                             private readonly XssDetectionEngine _xssEngine;
                             private readonly SqlInjectionDetectionEngine _sqlEngine;
                             private readonly RaspAlertBus _bus;
+                            private readonly IRaspMetrics _metrics;
+                            private readonly bool _blockOnDetection;
+                            private readonly bool _enableMetrics;
 
                             private static readonly SearchValues<char> _unifiedGuard = 
                                 SearchValues.Create("<>&\"'\\%-;/*:()");
@@ -165,18 +173,60 @@ public class RaspGrpcGenerator : IIncrementalGenerator
                             public {{className}}(
                                 XssDetectionEngine xssEngine, 
                                 SqlInjectionDetectionEngine sqlEngine, 
-                                RaspAlertBus bus)
+                                RaspAlertBus bus,
+                                IRaspMetrics metrics,
+                                IOptions<RaspOptions> options)
                             {
                                 _xssEngine = xssEngine;
                                 _sqlEngine = sqlEngine;
                                 _bus = bus;
+                                _metrics = metrics;
+                                // Captured at startup for performance. Runtime changes to options require restart.
+                                _blockOnDetection = options.Value.BlockOnDetection;
+                                _enableMetrics = options.Value.EnableMetrics;
                             }
 
                             public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
-                                TRequest request, 
-                                ServerCallContext context, 
+                                TRequest request,
+                                ServerCallContext context,
                                 UnaryServerMethod<TRequest, TResponse> continuation)
                             {
+                                // AddRaspSecurity() registers one interceptor instance PER gRPC service into the
+                                // same global GrpcServiceOptions.Interceptors pipeline, so with N services every
+                                // call passes through all N nested interceptors regardless of which one's switch
+                                // below actually matches the request. Only the FIRST interceptor entered (the
+                                // outermost one, however unrelated its own service is to this call) establishes
+                                // the RaspContext; every nested one reuses it via RaspExecutionContext.Current
+                                // instead of creating - and BeginScope-ing - its own. Without this guard, the
+                                // real handler and any sink it reaches would observe whichever interceptor is
+                                // innermost, not the one whose alert (if any) fired the CorrelationId - breaking
+                                // exactly the source-to-sink join ADR 007 exists for. context.Method (the actual
+                                // requested method) is the same ServerCallContext instance throughout the chain,
+                                // so Source is correct even when established by an unrelated service's interceptor.
+                                RaspContext raspContext;
+                                RaspScope? ownedScope = null;
+                                if (RaspExecutionContext.Current is { } existingContext)
+                                {
+                                    raspContext = existingContext;
+                                }
+                                else
+                                {
+                                    raspContext = new RaspContext
+                                    {
+                                        CorrelationId = Guid.NewGuid().ToString("N"),
+                                        Source = $"gRPC {context.Method}",
+                                        RemoteId = context.Peer,
+                                        TraceId = Activity.Current?.TraceId.ToString(),
+                                        StartedUtc = DateTime.UtcNow
+                                    };
+                                    ownedScope = RaspExecutionContext.BeginScope(raspContext);
+                                }
+
+                                try
+                                {
+
+                                var start = System.Diagnostics.Stopwatch.GetTimestamp();
+                                bool inspected = false;
                                 switch (context.Method)
                                 {
                         """);
@@ -187,7 +237,8 @@ public class RaspGrpcGenerator : IIncrementalGenerator
                                         case var m when m.EndsWith("/{{method.MethodName}}", StringComparison.Ordinal):
                                             if (request is {{method.RequestType}} msg_{{method.MethodName}})
                                             {
-                                                Validate_{{method.MethodName}}(msg_{{method.MethodName}}, context.Method);
+                                                inspected = true;
+                                                Validate_{{method.MethodName}}(msg_{{method.MethodName}}, context.Method, raspContext);
                                             }
                                             break;
                             """);
@@ -195,7 +246,17 @@ public class RaspGrpcGenerator : IIncrementalGenerator
 
         sb.AppendLine($$"""
                                 }
+                                if (inspected && _enableMetrics)
+                                {
+                                    var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+                                    _metrics.RecordInspection("gRPC", elapsed);
+                                }
                                 return await continuation(request, context);
+                                }
+                                finally
+                                {
+                                    ownedScope?.Dispose();
+                                }
                             }
                         """);
 
@@ -205,13 +266,14 @@ public class RaspGrpcGenerator : IIncrementalGenerator
             sb.AppendLine(
                 $"    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
             sb.AppendLine(
-                $"    private void Validate_{method.MethodName}({method.RequestType} req, string contextName)");
+                $"    private void Validate_{method.MethodName}({method.RequestType} req, string contextName, RaspContext raspContext)");
             sb.AppendLine("    {");
 
+            int propIndex = 0;
             foreach (var prop in method.Properties)
             {
                 string pathSafe = prop.Path.Replace(".", "?.");
-                string loopVar = prop.IsCollection ? "item" : $"val_{Math.Abs(prop.Path.GetHashCode())}";
+                string loopVar = prop.IsCollection ? "item" : $"val_{propIndex++}";
 
                 if (prop.IsCollection)
                 {
@@ -221,8 +283,9 @@ public class RaspGrpcGenerator : IIncrementalGenerator
                                             foreach (var item in req.{{prop.Path}})
                                             {
                                                 if (string.IsNullOrEmpty(item)) continue;
+                                                RaspTaintSensor.MarkTainted(item);
                                                 var span = item.AsSpan();
-                                                
+
                                                 if (!span.ContainsAny(_unifiedGuard)) continue;
 
                                                 if (span.ContainsAny(_xssGuard))
@@ -230,16 +293,30 @@ public class RaspGrpcGenerator : IIncrementalGenerator
                                                     var xssRes = _xssEngine.Inspect(span, "{{prop.Path}}");
                                                     if (xssRes.IsThreat) 
                                                     {
-                                                        _bus.PushAlert(xssRes.ThreatType ?? "Unknown", item, $"{{prop.Path}} in {contextName}");
-                                                        throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                        _bus.PushAlert(raspContext, xssRes.ThreatType ?? "Unknown", item, $"{{prop.Path}} in {contextName}");
+                                                        if (_enableMetrics)
+                                                        {
+                                                            _metrics.ReportThreat("gRPC", xssRes.ThreatType ?? "Unknown", _blockOnDetection);
+                                                        }
+                                                        if (_blockOnDetection)
+                                                        {
+                                                            throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                        }
                                                     }
                                                 }
 
                                                 var sqlRes = _sqlEngine.Inspect(span, "{{prop.Path}}");
                                                 if (sqlRes.IsThreat) 
                                                 {
-                                                    _bus.PushAlert(sqlRes.ThreatType ?? "Unknown", item, $"{{prop.Path}} in {contextName}");
-                                                    throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                    _bus.PushAlert(raspContext, sqlRes.ThreatType ?? "Unknown", item, $"{{prop.Path}} in {contextName}");
+                                                    if (_enableMetrics)
+                                                    {
+                                                        _metrics.ReportThreat("gRPC", sqlRes.ThreatType ?? "Unknown", _blockOnDetection);
+                                                    }
+                                                    if (_blockOnDetection)
+                                                    {
+                                                        throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                    }
                                                 }
                                             }
                                         }
@@ -251,6 +328,7 @@ public class RaspGrpcGenerator : IIncrementalGenerator
                                         var {{loopVar}} = req.{{pathSafe}};
                                         if (!string.IsNullOrEmpty({{loopVar}}))
                                         {
+                                            RaspTaintSensor.MarkTainted({{loopVar}});
                                             var span = {{loopVar}}.AsSpan();
 
                                             if (span.ContainsAny(_unifiedGuard))
@@ -260,16 +338,30 @@ public class RaspGrpcGenerator : IIncrementalGenerator
                                                     var xssRes = _xssEngine.Inspect(span, "{{prop.Path}}");
                                                     if (xssRes.IsThreat)
                                                     {
-                                                        _bus.PushAlert(xssRes.ThreatType ?? "Unknown", {{loopVar}}, $"{{prop.Path}} in {contextName}");
-                                                        throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                        _bus.PushAlert(raspContext, xssRes.ThreatType ?? "Unknown", {{loopVar}}, $"{{prop.Path}} in {contextName}");
+                                                        if (_enableMetrics)
+                                                        {
+                                                            _metrics.ReportThreat("gRPC", xssRes.ThreatType ?? "Unknown", _blockOnDetection);
+                                                        }
+                                                        if (_blockOnDetection)
+                                                        {
+                                                            throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                        }
                                                     }
                                                 }
 
                                                 var sqlRes = _sqlEngine.Inspect(span, "{{prop.Path}}");
                                                 if (sqlRes.IsThreat)
                                                 {
-                                                    _bus.PushAlert(sqlRes.ThreatType ?? "Unknown", {{loopVar}}, $"{{prop.Path}} in {contextName}");
-                                                    throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                    _bus.PushAlert(raspContext, sqlRes.ThreatType ?? "Unknown", {{loopVar}}, $"{{prop.Path}} in {contextName}");
+                                                    if (_enableMetrics)
+                                                    {
+                                                        _metrics.ReportThreat("gRPC", sqlRes.ThreatType ?? "Unknown", _blockOnDetection);
+                                                    }
+                                                    if (_blockOnDetection)
+                                                    {
+                                                        throw new RpcException(new Status(StatusCode.InvalidArgument, "RASP Security Violation"));
+                                                    }
                                                 }
                                             }
                                         }
