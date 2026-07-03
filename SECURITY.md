@@ -8,7 +8,7 @@
 
 **DO NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email: **[rasp.net.passerby434@passinbox.com]** with:
+Instead, please email: **[security.mullets599@passinbox.com]** with:
 
 - Description of the vulnerability
 - Steps to reproduce

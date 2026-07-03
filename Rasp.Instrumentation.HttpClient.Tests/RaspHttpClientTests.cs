@@ -26,18 +26,19 @@ public class RaspHttpClientTests
     private ServiceProvider CreateProvider(bool blockOnDetection = true)
     {
         var services = new ServiceCollection();
-        
-        services.Configure<RaspOptions>(opt => {
+
+        services.Configure<RaspOptions>(opt =>
+        {
             opt.BlockOnDetection = blockOnDetection;
             opt.BlockOnSsrfDetection = blockOnDetection;
             opt.BlockOnAdoNetDetection = blockOnDetection;
         });
         services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
         services.AddLogging();
-        
+
         services.AddRaspCore();
         services.AddRaspHttpClient();
-        
+
         if (!blockOnDetection)
         {
             // For audit mode test, use MockPrimaryHandler so it doesn't fail with real network error
@@ -66,7 +67,7 @@ public class RaspHttpClientTests
         services.AddRaspHttpClient();
         services.AddHttpClient("TestClient")
                 .ConfigurePrimaryHttpMessageHandler(() => new MockPrimaryHandler());
-        
+
         var provider = services.BuildServiceProvider();
         var factory = provider.GetRequiredService<IHttpClientFactory>();
         var client = factory.CreateClient("TestClient");

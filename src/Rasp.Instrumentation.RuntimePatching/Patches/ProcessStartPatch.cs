@@ -21,7 +21,7 @@ public static class ProcessStartPatch
 
         // In .NET Core, Process.Start() instance method is the ultimate choke point.
         var startMethod = typeof(Process).GetMethod("Start", Type.EmptyTypes);
-        
+
         if (startMethod != null)
         {
             var hook = new ILHook(startMethod, InjectProcessInspection);
@@ -32,7 +32,7 @@ public static class ProcessStartPatch
     private static void InjectProcessInspection(ILContext il)
     {
         var cursor = new ILCursor(il);
-        
+
         // Arg 0 is 'this' (Process instance). We load it to extract StartInfo.
         cursor.Emit(OpCodes.Ldarg_0);
         cursor.EmitDelegate<Action<Process>>(InspectProcess);
@@ -43,13 +43,13 @@ public static class ProcessStartPatch
         if (_guard == null || ReentrancyGuard.IsInGuard) return;
 
         using var scope = ReentrancyGuard.Enter();
-        
+
         var startInfo = process.StartInfo;
         if (startInfo != null)
         {
             var exe = startInfo.FileName;
             var useShellExecute = startInfo.UseShellExecute;
-            
+
             // Reconstruct arguments list. If ArgumentList is empty, fallback to parsing Arguments as a single string token.
             IReadOnlyList<string> args;
             if (startInfo.ArgumentList.Count > 0)

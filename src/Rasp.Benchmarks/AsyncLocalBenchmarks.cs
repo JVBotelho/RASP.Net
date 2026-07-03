@@ -33,7 +33,7 @@ public class AsyncLocalBenchmarks
     {
         using var scope = RaspExecutionContext.BeginScope(_dummyContext);
         await AwaitHop1().ConfigureAwait(false);
-        
+
         // Simulate a read at the sink
         var current = RaspExecutionContext.Current;
         if (current == null) throw new InvalidOperationException();

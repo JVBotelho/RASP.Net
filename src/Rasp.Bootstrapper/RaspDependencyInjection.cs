@@ -8,6 +8,7 @@ using Rasp.Core.Infrastructure;
 using Rasp.Core.Abstractions;
 
 namespace Rasp.Bootstrapper;
+
 public static partial class RaspDependencyInjection
 {
     public static IServiceCollection AddRasp(this IServiceCollection services, IConfiguration configuration)
@@ -20,7 +21,7 @@ public static partial class RaspDependencyInjection
         services.AddSingleton<XssDetectionEngine>();
         services.AddSingleton<SqlInjectionDetectionEngine>();
         services.AddSingleton<IDetectionEngine, CompositeDetectionEngine>();
-        
+
         // 3. Register Alerting Infrastructure
         services.AddHostedService<RaspAlertConsumerService>();
         return services;

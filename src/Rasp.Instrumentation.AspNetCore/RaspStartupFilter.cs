@@ -19,7 +19,7 @@ public sealed class RaspStartupFilter : IStartupFilter
         {
             // Establish the Context first so that any downstream middleware benefits from provenance
             app.UseMiddleware<RaspContextMiddleware>();
-            
+
             app.UseMiddleware<RaspSecurityHeadersMiddleware>();
 
             next(app);

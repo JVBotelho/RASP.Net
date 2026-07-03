@@ -26,12 +26,12 @@ public class PathTraversalDetectionEngine : IDetectionEngine
     public PathTraversalDetectionEngine(IOptions<RaspOptions> options)
     {
         _options = options?.Value ?? new RaspOptions();
-        
+
         // OrdinalIgnoreCase is for Windows, Ordinal is for Linux/Mac
-        _pathComparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
-            ? StringComparison.OrdinalIgnoreCase 
+        _pathComparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
-            
+
         // Pre-cache canonical allowed roots with boundaries applied to enable zero-alloc fast-path
         _canonicalAllowedRoots = new List<string>();
         var configuredRoots = _options.AllowedFileRoots;
@@ -75,15 +75,15 @@ public class PathTraversalDetectionEngine : IDetectionEngine
 
         // --- Fast-Path (Zero-Alloc) ---
         // Only accept if we are absolutely certain. Any ambiguity falls to the slow path.
-        if (Path.IsPathRooted(payload) && 
-            !payload.Contains("..".AsSpan(), StringComparison.Ordinal) && 
+        if (Path.IsPathRooted(payload) &&
+            !payload.Contains("..".AsSpan(), StringComparison.Ordinal) &&
             !payload.Contains("./".AsSpan(), StringComparison.Ordinal) &&
             !payload.Contains(".\\".AsSpan(), StringComparison.Ordinal))
         {
             foreach (var root in _canonicalAllowedRoots)
             {
                 var rootSpan = root.AsSpan();
-                
+
                 // Fast boundary check without allocating strings
                 if (payload.StartsWith(rootSpan, _pathComparison))
                 {
@@ -94,16 +94,16 @@ public class PathTraversalDetectionEngine : IDetectionEngine
 
         // --- Slow-Path (Allocates, resolves ground-truth) ---
         string payloadStr = payload.ToString();
-        
+
         // Pre-validate invalid chars to prevent GetFullPath from throwing and causing exception-DoS
         if (payloadStr.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
         {
-             return DetectionResult.Threat(
-                "Path Traversal", 
-                "Path contains invalid characters", 
-                Enums.ThreatSeverity.High, 
-                1.0, 
-                payloadStr);
+            return DetectionResult.Threat(
+               "Path Traversal",
+               "Path contains invalid characters",
+               Enums.ThreatSeverity.High,
+               1.0,
+               payloadStr);
         }
 
         string fullPath;
@@ -116,10 +116,10 @@ public class PathTraversalDetectionEngine : IDetectionEngine
             // If the path is so malformed it throws during GetFullPath, 
             // it's highly suspicious or invalid. We block to be safe.
             return DetectionResult.Threat(
-                "Path Traversal", 
-                "Malformed path format", 
-                Enums.ThreatSeverity.High, 
-                1.0, 
+                "Path Traversal",
+                "Malformed path format",
+                Enums.ThreatSeverity.High,
+                1.0,
                 payloadStr);
         }
 
@@ -135,9 +135,9 @@ public class PathTraversalDetectionEngine : IDetectionEngine
                 isAllowed = true;
                 break;
             }
-            
+
             // If the full path exactly equals the root (without the trailing slash), it's also allowed
-            if (rootSpan.Length > 0 && 
+            if (rootSpan.Length > 0 &&
                 fullPathSpan.Length == rootSpan.Length - 1 &&
                 rootSpan.StartsWith(fullPathSpan, _pathComparison) &&
                 (rootSpan[rootSpan.Length - 1] == Path.DirectorySeparatorChar || rootSpan[rootSpan.Length - 1] == Path.AltDirectorySeparatorChar))
@@ -150,10 +150,10 @@ public class PathTraversalDetectionEngine : IDetectionEngine
         if (!isAllowed)
         {
             return DetectionResult.Threat(
-                "Path Traversal", 
-                "Path resolves outside allowed roots", 
-                Enums.ThreatSeverity.Critical, 
-                1.0, 
+                "Path Traversal",
+                "Path resolves outside allowed roots",
+                Enums.ThreatSeverity.Critical,
+                1.0,
                 fullPath);
         }
 

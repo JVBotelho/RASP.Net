@@ -14,7 +14,7 @@ public class RaspAlertBusTests
     public void PushAlert_WhenChannelIsFull_ShouldIncrementDroppedCountAndReturnToPool()
     {
         var bus = new RaspAlertBus();
-        
+
         // Channel capacity is 5000. We push 5001 items without reading.
         for (int i = 0; i < 5001; i++)
         {

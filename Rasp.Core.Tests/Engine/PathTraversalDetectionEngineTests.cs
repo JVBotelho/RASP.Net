@@ -27,7 +27,7 @@ public class PathTraversalDetectionEngineTests
     {
         var engine = CreateEngine(new List<string>());
         var result = engine.Inspect("/etc/passwd");
-        
+
         result.IsThreat.Should().BeFalse();
     }
 
@@ -36,10 +36,10 @@ public class PathTraversalDetectionEngineTests
     {
         var root = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "C:\\App\\Data" : "/app/data";
         var engine = CreateEngine(new List<string> { root });
-        
+
         var path = Path.Combine(root, "file.txt");
         var result = engine.Inspect(path);
-        
+
         result.IsThreat.Should().BeFalse();
     }
 
@@ -48,10 +48,10 @@ public class PathTraversalDetectionEngineTests
     {
         var root = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "C:\\App\\Data" : "/app/data";
         var engine = CreateEngine(new List<string> { root });
-        
+
         var path = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "C:\\Windows\\System32\\sam" : "/etc/passwd";
         var result = engine.Inspect(path);
-        
+
         result.IsThreat.Should().BeTrue();
         result.ThreatType.Should().Be("Path Traversal");
     }
@@ -61,7 +61,7 @@ public class PathTraversalDetectionEngineTests
     {
         var root = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "C:\\App\\Data" : "/app/data";
         var engine = CreateEngine(new List<string> { root });
-        
+
         // Starts in allowed root but escapes using ../
         var path = Path.Combine(root, "..", "..", "Windows", "System32", "sam");
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -70,7 +70,7 @@ public class PathTraversalDetectionEngineTests
         }
 
         var result = engine.Inspect(path);
-        
+
         result.IsThreat.Should().BeTrue();
         result.MatchedPattern.Should().NotContain(".."); // Match pattern should be the fully resolved path
     }
@@ -80,10 +80,10 @@ public class PathTraversalDetectionEngineTests
     {
         var root = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "C:\\App\\Data" : "/app/data";
         var engine = CreateEngine(new List<string> { root });
-        
+
         var path = Path.Combine(root, "subdir", "..", "file.txt");
         var result = engine.Inspect(path);
-        
+
         result.IsThreat.Should().BeFalse();
     }
 
@@ -93,13 +93,13 @@ public class PathTraversalDetectionEngineTests
         // Tests the boundary fix (StartsWith bug)
         var root = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "C:\\App\\Data" : "/app/data";
         var engine = CreateEngine(new List<string> { root });
-        
+
         // This starts with the same string, but is a different directory!
         var bypassPath = root + "-secret";
-        
+
         var path = Path.Combine(bypassPath, "file.txt");
         var result = engine.Inspect(path);
-        
+
         result.IsThreat.Should().BeTrue();
     }
 }

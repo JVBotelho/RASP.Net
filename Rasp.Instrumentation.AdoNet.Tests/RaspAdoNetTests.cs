@@ -9,10 +9,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Rasp.Core;
+using Rasp.Core.Abstractions;
 using Rasp.Core.Configuration;
 using Rasp.Core.Exceptions;
 using Rasp.Core.Infrastructure;
-using Rasp.Core.Abstractions;
 using Rasp.Instrumentation.AdoNet.Diagnostics;
 using Xunit;
 
@@ -29,11 +29,11 @@ public class RaspAdoNetTests
     private ServiceProvider CreateProvider(bool blockOnDetection = true)
     {
         var services = new ServiceCollection();
-        
+
         var options = new RaspOptions { BlockOnAdoNetDetection = blockOnDetection };
         services.AddSingleton(Options.Create(options));
         services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
-        
+
         services.AddRaspCore();
         services.AddRaspAdoNet();
         services.AddLogging();
@@ -42,7 +42,7 @@ public class RaspAdoNetTests
     }
 
     [Fact]
-    public void Synthetic_ShouldExtractCommand_AndBlock_WhenThreatDetected()
+    public async Task Synthetic_ShouldExtractCommand_AndBlock_WhenThreatDetected()
     {
         var provider = CreateProvider();
         var observer = provider.GetRequiredService<RaspAdoNetDiagnosticObserver>();
@@ -67,10 +67,10 @@ public class RaspAdoNetTests
         var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
         var alerts = bus.ReadAlertsAsync(cts.Token);
         var enumerator = alerts.GetAsyncEnumerator(cts.Token);
-        
-        enumerator.MoveNextAsync().AsTask().Wait();
+
+        await enumerator.MoveNextAsync();
         var alert = enumerator.Current;
-        
+
         alert.ThreatType.Should().Be("SQL Injection");
     }
 

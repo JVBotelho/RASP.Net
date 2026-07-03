@@ -16,7 +16,7 @@ public sealed class RaspContext
 
     /// <summary>Transport-level origin where known (remote IP, user id, trace id).</summary>
     public string? RemoteId { get; init; }
-    
+
     public string? TraceId { get; init; }
 
     /// <summary>When this request entered the protected boundary.</summary>

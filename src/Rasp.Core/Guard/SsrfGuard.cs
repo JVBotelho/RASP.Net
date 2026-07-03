@@ -27,7 +27,7 @@ public partial class SsrfGuard
         ILogger<SsrfGuard> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
-        
+
         _engine = engine;
         _bus = bus;
         _metrics = metrics;
@@ -54,11 +54,11 @@ public partial class SsrfGuard
             bool block = _options.BlockOnSsrfDetection;
 
             _metrics.ReportThreat(context, threatType, block);
-            var ambient = RaspExecutionContext.Current ?? new RaspContext 
-            { 
-                CorrelationId = Guid.NewGuid().ToString("N"), 
-                Source = $"orphan:{context}", 
-                StartedUtc = DateTime.UtcNow 
+            var ambient = RaspExecutionContext.Current ?? new RaspContext
+            {
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                Source = $"orphan:{context}",
+                StartedUtc = DateTime.UtcNow
             };
             _bus.PushAlert(ambient, threatType, pattern, $"{context} Outbound Request - Confidence: {result.Confidence}");
 
@@ -93,11 +93,11 @@ public partial class SsrfGuard
             bool block = _options.BlockOnSsrfDetection;
 
             _metrics.ReportThreat(context, threatType, block);
-            var ambient = RaspExecutionContext.Current ?? new RaspContext 
-            { 
-                CorrelationId = Guid.NewGuid().ToString("N"), 
-                Source = $"orphan:{context}", 
-                StartedUtc = DateTime.UtcNow 
+            var ambient = RaspExecutionContext.Current ?? new RaspContext
+            {
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                Source = $"orphan:{context}",
+                StartedUtc = DateTime.UtcNow
             };
             _bus.PushAlert(ambient, threatType, pattern, $"{context} Outbound Request IP - Confidence: {result.Confidence}");
 

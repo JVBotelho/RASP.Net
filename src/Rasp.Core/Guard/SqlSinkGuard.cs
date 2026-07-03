@@ -27,7 +27,7 @@ public partial class SqlSinkGuard
         ILogger<SqlSinkGuard> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
-        
+
         _engine = engine;
         _bus = bus;
         _metrics = metrics;

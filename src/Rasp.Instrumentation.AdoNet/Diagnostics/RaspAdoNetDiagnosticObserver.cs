@@ -28,7 +28,7 @@ public class RaspAdoNetDiagnosticObserver : IObserver<DiagnosticListener>, IObse
         ILogger<RaspAdoNetDiagnosticObserver> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
-        
+
         _guard = guard;
         _options = options.Value;
         _logger = logger;
@@ -68,10 +68,10 @@ public class RaspAdoNetDiagnosticObserver : IObserver<DiagnosticListener>, IObse
     private static DbCommand? ExtractCommand(object payload)
     {
         var payloadType = payload.GetType();
-        
+
         // Use cached compiled expression to extract the "Command" property
         var extractor = _commandExtractors.GetOrAdd(payloadType, CreateExtractor);
-        
+
         return extractor(payload);
     }
 

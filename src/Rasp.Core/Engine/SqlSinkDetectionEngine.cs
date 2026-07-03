@@ -105,7 +105,7 @@ public class SqlSinkDetectionEngine : IDetectionEngine
             if (index < 0) break;
 
             int absoluteIndex = offset + index;
-            
+
             // Check backwards to see if there is any non-whitespace before a newline
             bool isBreakout = false;
             for (int i = absoluteIndex - 1; i >= 0; i--)

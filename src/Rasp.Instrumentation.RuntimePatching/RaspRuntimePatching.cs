@@ -36,27 +36,27 @@ public static class RaspRuntimePatching
                 return;
             }
 
-                logger?.LogInformation("Initializing RASP Runtime Patching (MonoMod) for Path Traversal and Process Execution.");
+            logger?.LogInformation("Initializing RASP Runtime Patching (MonoMod) for Path Traversal and Process Execution.");
 
-                try
-                {
-                    FileStreamPatch.Apply(serviceProvider);
-                }
-                catch (Exception ex)
-                {
-                    logger?.LogCritical(ex, "Failed to apply FileStreamPatch. This may leave the application unprotected against File System threats.");
-                }
+            try
+            {
+                FileStreamPatch.Apply(serviceProvider);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogCritical(ex, "Failed to apply FileStreamPatch. This may leave the application unprotected against File System threats.");
+            }
 
-                try
-                {
-                    ProcessStartPatch.Apply(serviceProvider);
-                }
-                catch (Exception ex)
-                {
-                    logger?.LogCritical(ex, "Failed to apply ProcessStartPatch. This may leave the application unprotected against Process Execution threats.");
-                }
+            try
+            {
+                ProcessStartPatch.Apply(serviceProvider);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogCritical(ex, "Failed to apply ProcessStartPatch. This may leave the application unprotected against Process Execution threats.");
+            }
 
-                logger?.LogInformation("RASP Runtime Patching applied successfully.");
+            logger?.LogInformation("RASP Runtime Patching applied successfully.");
 
             _initialized = true;
         }

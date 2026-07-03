@@ -21,7 +21,7 @@ public static class FileStreamPatch
         _guard = serviceProvider.GetService<PathTraversalGuard>();
 
         var fileStreamType = typeof(FileStream);
-        
+
         // Hook all public constructors of FileStream that take a string as the first parameter
         var ctors = fileStreamType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
         foreach (var ctor in ctors)
@@ -46,7 +46,7 @@ public static class FileStreamPatch
     private static void InjectPathInspection(ILContext il)
     {
         var cursor = new ILCursor(il);
-        
+
         // Arg 0 is 'this' (FileStream instance). Arg 1 is the 'path' string.
         cursor.Emit(OpCodes.Ldarg_1);
         cursor.EmitDelegate<Action<string>>(InspectPath);
@@ -55,7 +55,7 @@ public static class FileStreamPatch
     private static void InjectPathInspectionStatic(ILContext il)
     {
         var cursor = new ILCursor(il);
-        
+
         // Arg 0 is the 'path' string since it's a static method.
         cursor.Emit(OpCodes.Ldarg_0);
         cursor.EmitDelegate<Action<string>>(InspectPath);

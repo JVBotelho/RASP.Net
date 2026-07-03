@@ -46,7 +46,7 @@ public class SsrfDetectionEngineTests
     {
         var ip = IPAddress.Parse(ipString);
         var result = _engine.Inspect(ip);
-        
+
         Assert.True(result.IsThreat);
         Assert.Equal(expectedPattern, result.MatchedPattern);
     }
@@ -59,7 +59,7 @@ public class SsrfDetectionEngineTests
     {
         var ip = IPAddress.Parse(ipString);
         var result = _engine.Inspect(ip);
-        
+
         Assert.False(result.IsThreat);
     }
 }

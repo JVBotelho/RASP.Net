@@ -28,7 +28,7 @@ public partial class CommandInjectionGuard
         ILogger<CommandInjectionGuard> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
-        
+
         _engine = engine;
         _bus = bus;
         _metrics = metrics;
@@ -55,11 +55,11 @@ public partial class CommandInjectionGuard
             bool block = _options.BlockOnRuntimePatchingDetection;
 
             _metrics.ReportThreat(context, threatType, block);
-            var ambient = RaspExecutionContext.Current ?? new RaspContext 
-            { 
-                CorrelationId = Guid.NewGuid().ToString("N"), 
-                Source = $"orphan:{context}", 
-                StartedUtc = DateTime.UtcNow 
+            var ambient = RaspExecutionContext.Current ?? new RaspContext
+            {
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                Source = $"orphan:{context}",
+                StartedUtc = DateTime.UtcNow
             };
             _bus.PushAlert(ambient, threatType, pattern, $"{context} Process Execution - Confidence: {result.Confidence}");
 

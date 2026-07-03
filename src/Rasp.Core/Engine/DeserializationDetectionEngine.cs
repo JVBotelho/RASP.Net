@@ -33,17 +33,17 @@ public class DeserializationDetectionEngine : IDetectionEngine
     public DetectionResult Inspect(string? payload, string context = "Unknown")
     {
         if (string.IsNullOrEmpty(payload)) return DetectionResult.Safe();
-        
+
         var typeName = payload;
-        
+
         // Block exact dangerous types
         if (DangerousTypes.Contains(typeName))
         {
             return DetectionResult.Threat(
-                threatType: "Insecure Deserialization", 
-                description: "Attempt to deserialize known gadget chain type", 
-                severity: ThreatSeverity.Critical, 
-                confidence: 1.0, 
+                threatType: "Insecure Deserialization",
+                description: "Attempt to deserialize known gadget chain type",
+                severity: ThreatSeverity.Critical,
+                confidence: 1.0,
                 matchedPattern: typeName);
         }
 

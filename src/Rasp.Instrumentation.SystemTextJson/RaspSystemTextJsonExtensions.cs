@@ -29,7 +29,7 @@ public static class RaspSystemTextJsonExtensions
 
         var guard = serviceProvider.GetRequiredService<DeserializationGuard>();
         var modifierAction = RaspJsonTypeInfoModifier.CreateModifier(guard);
-        
+
         if (options.TypeInfoResolver is DefaultJsonTypeInfoResolver defaultResolver)
         {
             defaultResolver.Modifiers.Add(modifierAction);

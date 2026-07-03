@@ -34,7 +34,7 @@ public sealed class RaspMetrics : IRaspMetrics
             "rasp.inspection.duration",
             unit: "ms",
             description: "Distribution of time taken to inspect requests");
-            
+
         meter.CreateObservableCounter<long>(
             "rasp.alerts.dropped",
             () => bus.DroppedCount,

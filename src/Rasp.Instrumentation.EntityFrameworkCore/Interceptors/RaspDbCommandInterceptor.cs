@@ -23,7 +23,7 @@ public class RaspDbCommandInterceptor : DbCommandInterceptor
     public RaspDbCommandInterceptor(SqlSinkGuard guard)
     {
         ArgumentNullException.ThrowIfNull(guard);
-        
+
         _guard = guard;
     }
     private void AnalyzeCommand(DbCommand command)

@@ -11,22 +11,22 @@ public sealed class RaspSecurityException : Exception
     public string ThreatType { get; } = string.Empty;
     public string Description { get; } = string.Empty;
 
-    public RaspSecurityException() 
+    public RaspSecurityException()
         : base("RASP Security Block")
     {
     }
 
-    public RaspSecurityException(string message) 
+    public RaspSecurityException(string message)
         : base(message)
     {
     }
 
-    public RaspSecurityException(string message, Exception innerException) 
+    public RaspSecurityException(string message, Exception innerException)
         : base(message, innerException)
     {
     }
 
-    public RaspSecurityException(string threatType, string description) 
+    public RaspSecurityException(string threatType, string description)
         : base($"RASP Security Block [{threatType}]: {description}")
     {
         ThreatType = threatType;

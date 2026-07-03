@@ -43,7 +43,7 @@ public class RaspRuntimePatchingTests : IDisposable
         services.AddSingleton(Options.Create(options));
         services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
         services.AddLogging();
-        
+
         // Add Core dependencies
         services.AddSingleton<RaspAlertBus>();
         services.AddSingleton<PathTraversalDetectionEngine>();
@@ -69,7 +69,7 @@ public class RaspRuntimePatchingTests : IDisposable
     public void FileStream_WithinAllowedRoot_ShouldSucceed()
     {
         var testFile = Path.Combine(_allowedRoot, "test1.txt");
-        
+
         Action act = () =>
         {
             using var fs = new FileStream(testFile, FileMode.Create, FileAccess.Write);
@@ -85,7 +85,7 @@ public class RaspRuntimePatchingTests : IDisposable
         var unauthorizedDir = Path.Combine(Path.GetTempPath(), "RaspTests_Unauthorized");
         Directory.CreateDirectory(unauthorizedDir);
         var testFile = Path.Combine(unauthorizedDir, "test2.txt");
-        
+
         try
         {
             Action act = () =>
@@ -107,11 +107,11 @@ public class RaspRuntimePatchingTests : IDisposable
     {
         // To test reentrancy, we manually enter the guard, then try to open a file outside the root.
         // It should NOT throw RaspSecurityException because the guard will bypass the hook.
-        
+
         var unauthorizedDir = Path.Combine(Path.GetTempPath(), "RaspTests_Unauthorized_Reentrancy");
         Directory.CreateDirectory(unauthorizedDir);
         var testFile = Path.Combine(unauthorizedDir, "test3.txt");
-        
+
         try
         {
             Action act = () =>
@@ -135,16 +135,16 @@ public class RaspRuntimePatchingTests : IDisposable
         // In theory, echo should just run and exit.
         // However, on Windows, 'echo' is a shell built-in, so Process.Start might fail with "The system cannot find the file specified"
         // But the RASP shouldn't throw a RaspSecurityException.
-        
+
         Action act = () =>
         {
-            try 
+            try
             {
                 var psi = new ProcessStartInfo("echo", "hello");
                 Process.Start(psi);
             }
-            catch (System.ComponentModel.Win32Exception) 
-            { 
+            catch (System.ComponentModel.Win32Exception)
+            {
                 // Ignore standard OS exceptions, as long as it's not a RASP exception
             }
         };

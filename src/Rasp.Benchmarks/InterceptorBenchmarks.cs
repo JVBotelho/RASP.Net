@@ -31,12 +31,12 @@ public class BenchmarkGrpcInspector : IGrpcMessageInspector
     public DetectionResult Inspect(IMessage message, IDetectionEngine engine, int maxScanChars)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        
+
         if (message is CreateBookRequest req)
         {
             // Simulação justa: O código gerado verifica Title e Author.
             // Aqui fazemos o mesmo usando a engine genérica.
-            
+
             // 1. Title Scan
             if (!string.IsNullOrEmpty(req.Title))
             {
@@ -44,7 +44,7 @@ public class BenchmarkGrpcInspector : IGrpcMessageInspector
                 var res = engine.Inspect(req.Title.AsSpan(), "Unknown");
                 if (res.IsThreat) return res;
             }
-            
+
             // 2. Author Scan
             if (!string.IsNullOrEmpty(req.Author))
             {
@@ -102,13 +102,13 @@ public class InterceptorBenchmarks
         // Setup Engines Reais
         var sqlEngine = new SqlInjectionDetectionEngine(NullLogger<SqlInjectionDetectionEngine>.Instance);
         var xssEngine = new XssDetectionEngine();
-        
+
         // Composite: O Genérico usa isso para rodar SQL + XSS em uma chamada
         var compositeEngine = new CompositeDetectionEngine(sqlEngine, xssEngine);
-        
+
         var noOpEngine = new NoOpDetectionEngine();
         var inspector = new BenchmarkGrpcInspector();
-        var options = Options.Create(new RaspOptions { MaxGrpcScanChars = 1024 * 1024, BlockOnDetection = true }); 
+        var options = Options.Create(new RaspOptions { MaxGrpcScanChars = 1024 * 1024, BlockOnDetection = true });
         var interceptorLogger = NullLogger<SecurityInterceptor>.Instance;
         var bus = new RaspAlertBus();
         var metrics = new DummyRaspMetrics();

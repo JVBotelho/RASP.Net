@@ -5,15 +5,15 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Logging;
 using Rasp.Core;
+using Rasp.Core.Abstractions;
 using Rasp.Core.Configuration;
 using Rasp.Core.Engine;
 using Rasp.Core.Exceptions;
 using Rasp.Core.Infrastructure;
-using Rasp.Core.Abstractions;
 using Rasp.Instrumentation.EntityFrameworkCore.Interceptors;
 using Xunit;
 
@@ -27,7 +27,7 @@ public class User
 
 public class AppDbContext : DbContext
 {
-    public DbSet<User> Users { get; set; }
+    public DbSet<User> Users { get; set; } = null!;
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 }
@@ -43,14 +43,14 @@ public class RaspEntityFrameworkIntegrationTests
     private (AppDbContext Db, IServiceProvider Provider) CreateContext(bool blockOnDetection = true)
     {
         var services = new ServiceCollection();
-        
+
         // Mock metrics/options/bus since we aren't testing DI setup of those fully here
         var options = new RaspOptions { BlockOnDetection = blockOnDetection };
         services.AddSingleton(Options.Create(options));
         services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
-        
+
         services.AddRaspCore(); // Registers bus, engine, and guard
-        
+
         services.AddLogging();
         services.AddSingleton<RaspDbCommandInterceptor>();
 
@@ -106,7 +106,7 @@ public class RaspEntityFrameworkIntegrationTests
 
         // Injecting OR 1=1 without -- to avoid triggering CommentBreakout first
         string maliciousInput = "a' OR 1=1 OR 'a'='";
-        
+
         // We use ExecuteSqlRaw to bypass parameterization and simulate an actual injection reaching the sink
         Func<Task> act = async () => await db.Database.ExecuteSqlRawAsync($"SELECT * FROM Users WHERE Name = '{maliciousInput}'");
 
@@ -121,7 +121,7 @@ public class RaspEntityFrameworkIntegrationTests
 
         // Stacked query without -- to avoid triggering CommentBreakout first
         string maliciousInput = "a'; DROP TABLE Users; SELECT '";
-        
+
         Func<Task> act = async () => await db.Database.ExecuteSqlRawAsync($"SELECT * FROM Users WHERE Name = '{maliciousInput}'");
 
         await act.Should().ThrowAsync<RaspSecurityException>()
@@ -135,7 +135,7 @@ public class RaspEntityFrameworkIntegrationTests
         var bus = provider.GetRequiredService<RaspAlertBus>();
 
         string maliciousInput = "a' OR 1=1 OR 'a'='";
-        
+
         // Will NOT throw because BlockOnDetection = false
         // Will fail because the query is invalid sqlite, but we want to catch the SqliteException to prove Rasp didn't throw
         try
@@ -154,7 +154,7 @@ public class RaspEntityFrameworkIntegrationTests
         var enumerator = alerts.GetAsyncEnumerator(cts.Token);
         await enumerator.MoveNextAsync();
         var alert = enumerator.Current;
-        
+
         alert.ThreatType.Should().Be("SQL Injection");
         alert.PayloadSnippet.Should().Be("Tautology");
     }

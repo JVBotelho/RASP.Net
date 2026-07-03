@@ -25,15 +25,15 @@ public class RaspSystemTextJsonTests
     private DeserializationGuard CreateGuard(bool blockOnDetection = true)
     {
         var services = new ServiceCollection();
-        
+
         var options = new RaspOptions { BlockOnDetection = blockOnDetection };
         services.AddSingleton(Options.Create(options));
         services.AddSingleton<IRaspMetrics, DummyRaspMetrics>();
         services.AddLogging();
-        
+
         services.AddRaspCore();
         services.AddRaspSystemTextJson();
-        
+
         var provider = services.BuildServiceProvider();
         return provider.GetRequiredService<DeserializationGuard>();
     }
@@ -41,7 +41,7 @@ public class RaspSystemTextJsonTests
     private JsonSerializerOptions CreateOptions(bool blockOnDetection = true)
     {
         var guard = CreateGuard(blockOnDetection);
-        
+
         var options = new JsonSerializerOptions
         {
             TypeInfoResolver = new DefaultJsonTypeInfoResolver

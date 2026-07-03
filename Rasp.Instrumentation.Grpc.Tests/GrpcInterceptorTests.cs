@@ -66,17 +66,17 @@ public class GrpcInterceptorTests : IAsyncLifetime
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddGrpc();
-                    
+
                     var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
                     services.AddRasp(config);
 
                     // We test that AddRasp provides IRaspMetrics, so no AddSingleton<IRaspMetrics> here!
-                    services.PostConfigure<RaspOptions>(opt => 
+                    services.PostConfigure<RaspOptions>(opt =>
                     {
-                        opt.BlockOnDetection = true; 
+                        opt.BlockOnDetection = true;
                         opt.EnableMetrics = true;
                     });
-                    
+
                     services.AddGrpc(options => { }).AddRaspSecurity();
                 });
 
@@ -205,16 +205,16 @@ public class GrpcInterceptorTests : IAsyncLifetime
         });
 
         response.Title.Should().Be("XSS <script>alert(1)</script>");
-        
+
         // Check that RaspAlertConsumerService consumed the alert by looking at its logger
         var logger = (TestLogger<RaspAlertConsumerService>)auditHost.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RaspAlertConsumerService>>();
-        
+
         // Give the background service a brief moment to process the queue
         await Task.Delay(200);
-        
+
         logger.Logs.Should().Contain(log => log.Contains("XSS") && log.Contains("script"));
     }
-    
+
     [Fact]
     public async Task ThreatCounter_ShouldIncrement()
     {

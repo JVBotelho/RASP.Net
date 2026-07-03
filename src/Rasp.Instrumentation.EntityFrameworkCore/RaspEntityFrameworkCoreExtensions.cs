@@ -18,7 +18,7 @@ public static class RaspEntityFrameworkCoreExtensions
     {
         // Ensure core dependencies (Metrics, AlertBus) are registered.
         services.AddRaspCore();
-        
+
         // Ensure Options is available even if unconfigured, to prevent DI failure
         services.AddOptions<Rasp.Core.Configuration.RaspOptions>();
 

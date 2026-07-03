@@ -19,17 +19,17 @@ public static class RaspCoreExtensions
     {
         services.TryAddSingleton<RaspAlertBus>();
         services.TryAddSingleton<IRaspMetrics, RaspMetrics>();
-        
+
         // Ensure Options is resolvable even if AddRasp(IConfiguration) isn't called.
         services.AddOptions<RaspOptions>();
 
         // Register the reusable detection engine and its Guard
         services.TryAddSingleton<SqlSinkDetectionEngine>();
         services.TryAddSingleton<SqlSinkGuard>();
-        
+
         services.TryAddSingleton<SsrfDetectionEngine>();
         services.TryAddSingleton<SsrfGuard>();
-        
+
         services.TryAddSingleton<DeserializationDetectionEngine>();
         services.TryAddSingleton<DeserializationGuard>();
 

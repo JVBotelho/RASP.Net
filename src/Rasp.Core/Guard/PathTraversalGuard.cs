@@ -27,7 +27,7 @@ public partial class PathTraversalGuard
         ILogger<PathTraversalGuard> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
-        
+
         _engine = engine;
         _bus = bus;
         _metrics = metrics;
@@ -54,11 +54,11 @@ public partial class PathTraversalGuard
             bool block = _options.BlockOnRuntimePatchingDetection;
 
             _metrics.ReportThreat(context, threatType, block);
-            var ambient = RaspExecutionContext.Current ?? new RaspContext 
-            { 
-                CorrelationId = Guid.NewGuid().ToString("N"), 
-                Source = $"orphan:{context}", 
-                StartedUtc = DateTime.UtcNow 
+            var ambient = RaspExecutionContext.Current ?? new RaspContext
+            {
+                CorrelationId = Guid.NewGuid().ToString("N"),
+                Source = $"orphan:{context}",
+                StartedUtc = DateTime.UtcNow
             };
             _bus.PushAlert(ambient, threatType, pattern, $"{context} File Access - Confidence: {result.Confidence}");
 

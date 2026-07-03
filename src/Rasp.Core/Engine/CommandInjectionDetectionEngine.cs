@@ -18,10 +18,10 @@ namespace Rasp.Core.Engine;
 public partial class CommandInjectionDetectionEngine : IDetectionEngine
 {
     private readonly RaspOptions _options;
-    
+
     // Common shell metacharacters that allow command chaining or subshells.
     private static readonly string[] ShellMetaCharacters = { "&", "|", ";", "$(", "`", "\\", "\n", "\r", ">", "<", "${" };
-    
+
     [System.Text.RegularExpressions.GeneratedRegex(@"%[a-zA-Z0-9_]+%")]
     private static partial System.Text.RegularExpressions.Regex WindowsVariableRegex();
 
@@ -35,7 +35,7 @@ public partial class CommandInjectionDetectionEngine : IDetectionEngine
     public CommandInjectionDetectionEngine(IOptions<RaspOptions> options)
     {
         _options = options?.Value ?? new RaspOptions();
-        
+
         if (_options.AllowedProcesses != null)
         {
             foreach (var proc in _options.AllowedProcesses)
@@ -75,34 +75,34 @@ public partial class CommandInjectionDetectionEngine : IDetectionEngine
         if (_canonicalAllowedProcs.Count == 0)
         {
             return DetectionResult.Threat(
-                "Command Injection", 
-                "Process execution blocked by default (Empty Allowlist)", 
-                Enums.ThreatSeverity.Critical, 
-                1.0, 
+                "Command Injection",
+                "Process execution blocked by default (Empty Allowlist)",
+                Enums.ThreatSeverity.Critical,
+                1.0,
                 executablePath);
         }
 
         string fullPath;
-        try 
+        try
         {
             fullPath = Path.GetFullPath(executablePath);
         }
         catch (ArgumentException)
         {
-             return DetectionResult.Threat(
-                "Command Injection", 
-                "Malformed executable path", 
-                Enums.ThreatSeverity.High, 
-                1.0, 
-                executablePath);
+            return DetectionResult.Threat(
+               "Command Injection",
+               "Malformed executable path",
+               Enums.ThreatSeverity.High,
+               1.0,
+               executablePath);
         }
 
-        StringComparison comp = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
-            ? StringComparison.OrdinalIgnoreCase 
+        StringComparison comp = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
 
         bool isAllowed = false;
-        foreach(var canonicalAllowed in _canonicalAllowedProcs)
+        foreach (var canonicalAllowed in _canonicalAllowedProcs)
         {
             if (string.Equals(canonicalAllowed, fullPath, comp))
             {
@@ -114,10 +114,10 @@ public partial class CommandInjectionDetectionEngine : IDetectionEngine
         if (!isAllowed)
         {
             return DetectionResult.Threat(
-                "Command Injection", 
-                "Executable not in allowlist", 
-                Enums.ThreatSeverity.Critical, 
-                1.0, 
+                "Command Injection",
+                "Executable not in allowlist",
+                Enums.ThreatSeverity.Critical,
+                1.0,
                 executablePath);
         }
 
@@ -128,19 +128,19 @@ public partial class CommandInjectionDetectionEngine : IDetectionEngine
         // We only rigorously check metacharacters if UseShellExecute is true OR the binary is a shell.
         if ((useShellExecute || isShellInterpreter) && arguments != null && arguments.Count > 0)
         {
-            foreach(var arg in arguments)
+            foreach (var arg in arguments)
             {
                 if (string.IsNullOrWhiteSpace(arg)) continue;
-                
+
                 foreach (var meta in ShellMetaCharacters)
                 {
                     if (arg.Contains(meta, StringComparison.Ordinal))
                     {
                         return DetectionResult.Threat(
-                            "Command Injection", 
-                            $"Dangerous shell metacharacter '{meta}' in arguments", 
-                            Enums.ThreatSeverity.High, 
-                            0.9, 
+                            "Command Injection",
+                            $"Dangerous shell metacharacter '{meta}' in arguments",
+                            Enums.ThreatSeverity.High,
+                            0.9,
                             arg);
                     }
                 }
@@ -148,10 +148,10 @@ public partial class CommandInjectionDetectionEngine : IDetectionEngine
                 if (WindowsVariableRegex().IsMatch(arg))
                 {
                     return DetectionResult.Threat(
-                        "Command Injection", 
-                        "Dangerous Windows variable expansion in arguments", 
-                        Enums.ThreatSeverity.High, 
-                        0.9, 
+                        "Command Injection",
+                        "Dangerous Windows variable expansion in arguments",
+                        Enums.ThreatSeverity.High,
+                        0.9,
                         arg);
                 }
             }

@@ -6,7 +6,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
-using LibrarySystem.Contracts.Protos; 
+using LibrarySystem.Contracts.Protos;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Rasp.Core.Abstractions;
@@ -36,7 +36,7 @@ public class SourceGeneratorBenchmarks
 {
     // O Interceptor gerado aparecerá aqui após um Build com sucesso
     private Interceptor _generatedInterceptor = null!;
-    
+
     // Contextos estáticos
     private readonly FakeServerCallContext _createBookContext = new("/Library/CreateBook");
     private readonly FakeServerCallContext _getBookContext = new("/Library/GetBookById");
@@ -57,7 +57,7 @@ public class SourceGeneratorBenchmarks
     {
         // FIX: Uso direto do NullLogger tipado para evitar erro de compilação
         var sqlLogger = NullLogger<SqlInjectionDetectionEngine>.Instance;
-        
+
         // Setup Real das Engines
         var sqlEngine = new SqlInjectionDetectionEngine(sqlLogger);
         var xssEngine = new XssDetectionEngine();
@@ -103,8 +103,8 @@ public class SourceGeneratorBenchmarks
         // Rota sem strings (GetBookById) -> Deve ser instantâneo
         return await _generatedInterceptor.UnaryServerHandler(
             _fastRequest,
-            _getBookContext, 
-            (req, ctx) => Task.FromResult(new BookResponse()) 
+            _getBookContext,
+            (req, ctx) => Task.FromResult(new BookResponse())
         ).ConfigureAwait(false);
     }
 

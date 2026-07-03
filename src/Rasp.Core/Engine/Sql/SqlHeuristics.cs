@@ -42,10 +42,10 @@ internal static class SqlHeuristics
         "/*"
     ];
 
-    private static readonly System.Buffers.SearchValues<string> _highRiskSearchValues = 
+    private static readonly System.Buffers.SearchValues<string> _highRiskSearchValues =
         System.Buffers.SearchValues.Create(HighRiskTokens, StringComparison.OrdinalIgnoreCase);
 
-    private static readonly System.Buffers.SearchValues<string> _contextualSearchValues = 
+    private static readonly System.Buffers.SearchValues<string> _contextualSearchValues =
         System.Buffers.SearchValues.Create(ContextualPatterns, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>

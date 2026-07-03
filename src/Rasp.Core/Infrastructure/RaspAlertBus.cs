@@ -58,10 +58,10 @@ public class RaspAlertBus
         }
 
         alert.ThreatType = threatType;
-        alert.PayloadSnippet = string.IsNullOrEmpty(payload) ? string.Empty : 
+        alert.PayloadSnippet = string.IsNullOrEmpty(payload) ? string.Empty :
                                payload.Length > 64 ? string.Concat(payload.AsSpan(0, 64), "...") : payload;
         alert.Context = contextString;
-        
+
         if (ambientContext != null)
         {
             alert.CorrelationId = ambientContext.CorrelationId;
@@ -85,15 +85,15 @@ public class RaspAlertBus
         {
             // Snapshot fields before returning to pool to prevent Use-After-Return.
             var snapshot = new RaspAlertEvent(
-                alert.ThreatType, 
-                alert.PayloadSnippet, 
-                alert.Context, 
+                alert.ThreatType,
+                alert.PayloadSnippet,
+                alert.Context,
                 alert.CorrelationId,
                 alert.Source,
                 alert.RemoteId,
                 alert.TraceId,
                 alert.Timestamp);
-                
+
             ReturnToPool(alert);
             yield return snapshot;
         }
@@ -108,9 +108,9 @@ public class RaspAlertBus
 }
 
 public readonly record struct RaspAlertEvent(
-    string ThreatType, 
-    string PayloadSnippet, 
-    string Context, 
+    string ThreatType,
+    string PayloadSnippet,
+    string Context,
     string? CorrelationId,
     string? Source,
     string? RemoteId,
