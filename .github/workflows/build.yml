@@ -74,7 +74,7 @@ jobs:
       run: dotnet test ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx" --blame-hang-timeout 5m
 
     - name: Upload Test Results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: test-results-${{ matrix.os }}
@@ -187,7 +187,7 @@ jobs:
         category: "/language:cpp"
 
     - name: Upload built DLL
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Rasp.Native.Profiler-dll
         path: src/Rasp.Native.Profiler/build/*.dll
