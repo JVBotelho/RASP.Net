@@ -39,7 +39,7 @@ jobs:
         submodules: recursive
 
     - name: Setup .NET 10 (Preview)
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         dotnet-quality: 'preview'
@@ -95,7 +95,7 @@ jobs:
         submodules: recursive
 
     - name: Setup .NET 10
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         dotnet-quality: 'preview'
@@ -208,7 +208,7 @@ jobs:
         cmake --build src/Rasp.Native.Profiler/build-release
 
     - name: Setup .NET 10 (for live-attach smoke test)
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         dotnet-quality: 'preview'
