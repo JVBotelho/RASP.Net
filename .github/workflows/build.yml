@@ -137,7 +137,7 @@ jobs:
       run: dotnet format ${{ env.SOLUTION_NAME }} --verify-no-changes --verbosity diagnostic --exclude ./modules --no-restore
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         languages: csharp
 
@@ -145,7 +145,7 @@ jobs:
       run: dotnet build ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-restore /p:UseSharedCompilation=false
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4
 
   native-profiler-build:
     name: Native Profiler Build (MSVC)
@@ -170,7 +170,7 @@ jobs:
     # build-mode: manual because the actual build happens via the CMake steps below, not an
     # autodetected build system.
     - name: Initialize CodeQL (cpp)
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         languages: cpp
         build-mode: manual
@@ -182,7 +182,7 @@ jobs:
       run: cmake --build src/Rasp.Native.Profiler/build
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4
       with:
         category: "/language:cpp"
 
