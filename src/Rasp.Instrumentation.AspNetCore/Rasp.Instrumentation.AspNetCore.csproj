@@ -1,9 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <!-- Matches Rasp.Core/Rasp.Bootstrapper/Rasp.Instrumentation.Grpc: without this, the
+             project defaults to a stable 1.0.0, and NuGet rejects a stable package depending
+             on prerelease Rasp.Net.Core (NU5104). Lockstep versioning is ADR 009's subject. -->
+        <Version>1.0.5-elite</Version>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <IsPackable>true</IsPackable>
+        <PackageId>Rasp.Net.AspNetCore</PackageId>
+        <Description>ASP.NET Core middleware and security headers for RASP.Net. Phase A: supported public hooks only, no runtime patching.</Description>
+        <PackageTags>rasp;security;aspnetcore;middleware;runtime-application-self-protection</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,6 +24,10 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Rasp.Core\Rasp.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>

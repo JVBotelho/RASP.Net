@@ -1,11 +1,11 @@
-﻿using System.Buffers;
+﻿using Rasp.Core.Internal;
 
 namespace Rasp.Core.Engine.Xss;
 
 internal static class XssPolyglotDetector
 {
     // Signatures known to break multiple contexts simultaneously
-    private static readonly SearchValues<string> PolyglotSignatures = SearchValues.Create(
+    private static readonly MultiStringSearch PolyglotSignatures = MultiStringSearch.Create(
         [
             "\"><script>", "'><script>", "<svg/onload=", "<svg onload=",
             "';alert(", "\";alert(", "<img src=x onerror=", "javascript:alert",
@@ -17,7 +17,7 @@ internal static class XssPolyglotDetector
     {
         double score = 0.0;
 
-        if (payload.IndexOfAny(PolyglotSignatures) >= 0)
+        if (PolyglotSignatures.IndexOfAny(payload) >= 0)
         {
             return 1.0;
         }

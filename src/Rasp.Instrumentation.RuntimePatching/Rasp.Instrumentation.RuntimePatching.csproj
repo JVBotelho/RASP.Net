@@ -1,9 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- net10.0-only for now: MonoMod's FileStream/Process.Start detours don't reproduce
+         the intercepted behavior correctly on net8.0 (validated by
+         RaspRuntimePatchingTests.FileStream_WithinAllowedRoot_ShouldSucceed failing only on
+         net8.0). Per docs/ADR/008-nuget-packaging.md's mitigation: ship net10.0-only rather
+         than delay the rest of Stage 1 on a MonoMod/net8.0 compatibility fix. -->
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Phase B (MonoMod runtime patching) packaging - Rasp.Net.RuntimePatching, with its
+         opt-in-only README warning per docs/ADR/008-nuget-packaging.md - is deferred to a
+         later pass; this project stays unpackable for now. -->
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>

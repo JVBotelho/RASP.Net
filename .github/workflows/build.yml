@@ -80,6 +80,49 @@ jobs:
         name: test-results-${{ matrix.os }}
         path: '**/test-results-*.trx'
 
+  pack-verify:
+    name: Pack Verification
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup .NET 10 (Preview)
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        dotnet-quality: 'preview'
+        cache: true
+        cache-dependency-path: |
+          **/*.csproj
+          **/*.props
+          **/*.targets
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_NAME }} --locked-mode
+
+    - name: Build (Release)
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-restore
+
+    # Packs every packable project (the Phase A guards + the Rasp.Net meta-package per
+    # docs/ADR/008-nuget-packaging.md) to catch packaging regressions in PRs - this does NOT
+    # publish anywhere. The publish pipeline is docs/ADR/009-versioning-and-release-pipeline.md's
+    # subject.
+    - name: Pack (verification only, no publish)
+      run: dotnet pack ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-build --output ./artifacts/packages
+
+    - name: Upload packages
+      uses: actions/upload-artifact@v7
+      with:
+        name: nuget-packages
+        path: |
+          artifacts/packages/*.nupkg
+          artifacts/packages/*.snupkg
+        if-no-files-found: error
+
   security-audit:
     name: Security & Compliance
     runs-on: ubuntu-latest

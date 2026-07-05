@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Version>1.0.5-elite</Version>
@@ -9,6 +9,18 @@
     <IncludeBuildOutput>true</IncludeBuildOutput>
     <NoWarn>$(NoWarn);NU5128;NU5118</NoWarn>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Rasp.Net.Grpc</PackageId>
+    <Description>gRPC interceptor and generated-interceptor wiring for RASP.Net, including the RaspGrpcGenerator analyzer. Phase A: no runtime patching.</Description>
+    <PackageTags>rasp;security;grpc;runtime-application-self-protection</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
@@ -30,9 +42,13 @@
 
   <!-- Include source generator in NuGet package -->
   <Target Name="PackSourceGenerator" BeforeTargets="GenerateNuspec">
+    <!-- NoBuild=false override: "dotnet pack" with build already skipped propagates
+         NoBuild=true as a global property to this nested MSBuild call, which otherwise
+         conflicts with the explicit Build target below (NETSDK1085). The generator always
+         needs a real build here regardless of the outer pack's flags. -->
     <MSBuild Projects="..\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj"
              Targets="Build;GetTargetPath"
-             Properties="TargetFramework=netstandard2.0"
+             Properties="TargetFramework=netstandard2.0;NoBuild=false"
     >
       <Output TaskParameter="TargetOutputs" ItemName="RaspGeneratorAssembly" />
     </MSBuild>

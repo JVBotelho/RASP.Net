@@ -489,42 +489,42 @@
           "Grpc.AspNetCore": "[2.71.0, )"
         }
       },
-      "rasp.core": {
-        "type": "Project",
-        "dependencies": {
-          "Google.Protobuf": "[3.35.1, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.1, )",
-          "Microsoft.Extensions.Diagnostics.Abstractions": "[10.0.1, )",
-          "Microsoft.Extensions.Logging": "[10.0.1, )"
-        }
-      },
-      "rasp.instrumentation.entityframeworkcore": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, )",
-          "Rasp.Core": "[1.0.5-elite, )"
-        }
-      },
-      "rasp.instrumentation.grpc": {
-        "type": "Project",
-        "dependencies": {
-          "Grpc.AspNetCore": "[2.80.0, )",
-          "Grpc.Tools": "[2.81.1, )",
-          "Rasp.Core": "[1.0.5-elite, )"
-        }
-      },
-      "rasp.instrumentation.httpclient": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Extensions.Http": "[10.0.9, )",
-          "Rasp.Core": "[1.0.5-elite, )"
-        }
-      },
       "rasp.instrumentation.runtimepatching": {
         "type": "Project",
         "dependencies": {
           "MonoMod.RuntimeDetour": "[25.3.4, )",
-          "Rasp.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5-elite, )"
+        }
+      },
+      "Rasp.Net.Core": {
+        "type": "Project",
+        "dependencies": {
+          "Google.Protobuf": "[3.35.1, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.9, )",
+          "Microsoft.Extensions.Diagnostics.Abstractions": "[10.0.9, )",
+          "Microsoft.Extensions.Logging": "[10.0.9, )"
+        }
+      },
+      "Rasp.Net.EntityFrameworkCore": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, )",
+          "Rasp.Net.Core": "[1.0.5-elite, )"
+        }
+      },
+      "Rasp.Net.Grpc": {
+        "type": "Project",
+        "dependencies": {
+          "Grpc.AspNetCore": "[2.80.0, )",
+          "Grpc.Tools": "[2.81.1, )",
+          "Rasp.Net.Core": "[1.0.5-elite, )"
+        }
+      },
+      "Rasp.Net.HttpClient": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Http": "[10.0.9, )",
+          "Rasp.Net.Core": "[1.0.5-elite, )"
         }
       }
     }
