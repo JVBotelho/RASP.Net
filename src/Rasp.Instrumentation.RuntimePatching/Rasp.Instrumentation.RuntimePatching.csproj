@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- net10.0-only for now: MonoMod's FileStream/Process.Start detours don't reproduce
@@ -9,14 +9,20 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <!-- Phase B (MonoMod runtime patching) packaging - Rasp.Net.RuntimePatching, with its
-         opt-in-only README warning per docs/ADR/008-nuget-packaging.md - is deferred to a
-         later pass; this project stays unpackable for now. -->
-    <IsPackable>false</IsPackable>
+    <Version>1.2.0</Version>
+    <IsPackable>true</IsPackable>
+    <PackageId>Rasp.Net.RuntimePatching</PackageId>
+    <Description>MonoMod runtime patching for Path Traversal and Command Injection guards. Phase B: Opt-in only. Incompatible with Native AOT and may be flagged by AV/EDR products.</Description>
+    <PackageTags>rasp;security;monomod;runtime-patching</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MonoMod.RuntimeDetour" Version="25.3.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -64,9 +64,13 @@ Rules that make the boundary hold:
 - `Rasp.Net.Profiler.Windows` publishes only with prerelease version labels until the native test
   harness and Linux port (Stage 4) land. The "advanced preview" label lives in the version, not
   just in prose.
-- The `Rasp.Net.` package ID prefix gets reserved on nuget.org before first publish. Assembly
-  names and namespaces stay `Rasp.*` — package identity and assembly identity need not match, and
-  renaming assemblies would churn every consumer-visible `using` for no gain.
+- The `Rasp.Net.` package ID prefix gets reserved on nuget.org immediately after the first publish.
+  nuget.org's prefix reservation requires the requesting account to already own a package matching
+  the prefix, so reservation cannot precede publication — the sequence is: publish `Rasp.Net.Core`
+  (or any package in the set), then submit the prefix reservation request so the remaining
+  `Rasp.Net.*` permutations can't be squatted by another account. Assembly names and namespaces
+  stay `Rasp.*` — package identity and assembly identity need not match, and renaming assemblies
+  would churn every consumer-visible `using` for no gain.
 
 ### Multi-targeting `net8.0;net10.0`
 

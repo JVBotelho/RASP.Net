@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.0.5-elite</Version>
+    <Version>1.2.0</Version>
     <!-- Strong-named (public-sign, not a real key-pair signature) so Rasp.Native.Profiler
          can pin the AssemblyRef it emits for RaspTaintSensor by public key token instead of
          resolving by simple name alone - see docs/ADR/006-sink-instrumentation-strategy.md
@@ -27,6 +27,11 @@
     <PackageTags>rasp;security;waf;sql-injection;xss;runtime-application-self-protection</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <None Include="..\Rasp.SourceGenerators\bin\$(Configuration)\netstandard2.0\Rasp.SourceGenerators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.35.1" />

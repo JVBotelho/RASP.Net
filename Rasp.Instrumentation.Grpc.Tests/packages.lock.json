@@ -381,26 +381,26 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.9, )",
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.9, )",
           "Microsoft.Extensions.Options": "[10.0.9, )",
-          "Rasp.Net.AdoNet": "[1.0.0, )",
-          "Rasp.Net.AspNetCore": "[1.0.0, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )",
-          "Rasp.Net.EntityFrameworkCore": "[1.0.0, )",
-          "Rasp.Net.Grpc": "[1.0.5-elite, )",
-          "Rasp.Net.HttpClient": "[1.0.0, )",
-          "Rasp.Net.SystemTextJson": "[1.0.0, )"
+          "Rasp.Net.AdoNet": "[1.0.5, )",
+          "Rasp.Net.AspNetCore": "[1.0.5, )",
+          "Rasp.Net.Core": "[1.0.5, )",
+          "Rasp.Net.EntityFrameworkCore": "[1.0.5, )",
+          "Rasp.Net.Grpc": "[1.0.5, )",
+          "Rasp.Net.HttpClient": "[1.0.5, )",
+          "Rasp.Net.SystemTextJson": "[1.0.5, )"
         }
       },
       "Rasp.Net.AdoNet": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.9, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       },
       "Rasp.Net.AspNetCore": {
         "type": "Project",
         "dependencies": {
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       },
       "Rasp.Net.Core": {
@@ -416,7 +416,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       },
       "Rasp.Net.Grpc": {
@@ -424,20 +424,20 @@
         "dependencies": {
           "Grpc.AspNetCore": "[2.80.0, )",
           "Grpc.Tools": "[2.81.1, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       },
       "Rasp.Net.HttpClient": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Http": "[10.0.9, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       },
       "Rasp.Net.SystemTextJson": {
         "type": "Project",
         "dependencies": {
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       }
     }

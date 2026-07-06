@@ -72,6 +72,16 @@
           "Microsoft.Extensions.Options": "10.0.9"
         }
       },
+      "Microsoft.SourceLink.GitHub": {
+        "type": "Direct",
+        "requested": "[8.0.0, )",
+        "resolved": "8.0.0",
+        "contentHash": "G5q7OqtwIyGTkeIOAc3u2ZuV/kicQaec5EaRnc0pIeSnh9LUjj+PYQrJYBURvDt7twGl2PKA7nSN0kz1Zw5bnQ==",
+        "dependencies": {
+          "Microsoft.Build.Tasks.Git": "8.0.0",
+          "Microsoft.SourceLink.Common": "8.0.0"
+        }
+      },
       "BenchmarkDotNet.Annotations": {
         "type": "Transitive",
         "resolved": "0.15.8",
@@ -139,6 +149,11 @@
         "type": "Transitive",
         "resolved": "1.21.0",
         "contentHash": "dv5+81Q1TBQvVMSOOOmRcjJmvWcX3BZPZsIq31+RLc5cNft0IHAyNlkdb7ZarOWG913PyBoFDsDXoCIlKmLclg=="
+      },
+      "Microsoft.Build.Tasks.Git": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "bZKfSIKJRXLTuSzLudMFte/8CempWjVamNUR5eHJizsy+iuOuO/k2gnh7W0dHJmYY0tBf+gUErfluCv5mySAOQ=="
       },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Transitive",
@@ -373,6 +388,11 @@
         "resolved": "10.0.9",
         "contentHash": "fmEbAUFsaIKirgLt/lYhuFRBwhcSJN31jjHgCdbQxJiWOum6EdLjkbgGuukSP9z/a+9LibaxII/kF+GwOXgC4g=="
       },
+      "Microsoft.SourceLink.Common": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
+      },
       "Mono.Cecil": {
         "type": "Transitive",
         "resolved": "0.11.6",
@@ -489,13 +509,6 @@
           "Grpc.AspNetCore": "[2.71.0, )"
         }
       },
-      "rasp.instrumentation.runtimepatching": {
-        "type": "Project",
-        "dependencies": {
-          "MonoMod.RuntimeDetour": "[25.3.4, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )"
-        }
-      },
       "Rasp.Net.Core": {
         "type": "Project",
         "dependencies": {
@@ -509,7 +522,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       },
       "Rasp.Net.Grpc": {
@@ -517,14 +530,21 @@
         "dependencies": {
           "Grpc.AspNetCore": "[2.80.0, )",
           "Grpc.Tools": "[2.81.1, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       },
       "Rasp.Net.HttpClient": {
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.Http": "[10.0.9, )",
-          "Rasp.Net.Core": "[1.0.5-elite, )"
+          "Rasp.Net.Core": "[1.0.5, )"
+        }
+      },
+      "Rasp.Net.RuntimePatching": {
+        "type": "Project",
+        "dependencies": {
+          "MonoMod.RuntimeDetour": "[25.3.4, )",
+          "Rasp.Net.Core": "[1.0.5, )"
         }
       }
     }
