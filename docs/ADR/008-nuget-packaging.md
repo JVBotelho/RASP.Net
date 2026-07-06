@@ -1,7 +1,7 @@
 # ADR 008: NuGet Packaging & Package Boundaries
 
 **Date:** 2026-07-03
-**Status:** 🟡 Proposed
+**Status:** ✅ Accepted & Implemented
 **Priority:** High — gates everything in Stage 1 and, indirectly, the OWASP submission (ADR 010)
 **Builds on:** [ADR 006](006-sink-instrumentation-strategy.md) (the phase A/B/C risk boundary this ADR turns into package boundaries), [ADR 007](007-execution-context.md) (the context layer that ships in the core)
 

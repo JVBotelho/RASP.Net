@@ -1,7 +1,7 @@
 # ADR 009: Versioning & Release Pipeline
 
 **Date:** 2026-07-03
-**Status:** 🟡 Proposed
+**Status:** ✅ Accepted & Implemented
 **Priority:** High — a package without a versioning contract is worse than no package
 **Builds on:** [ADR 008](008-nuget-packaging.md) (the packages this pipeline versions and publishes), [ADR 006](006-sink-instrumentation-strategy.md) (addendum point 5 — the CI signing hook this pipeline consumes)
 
@@ -86,6 +86,25 @@ secrets — which must be re-created after the OWASP repository transfer
 ([ADR 010](010-owasp-incubator-submission.md)).
 
 ## Consequences
+
+### Implementation notes (2026-07-06)
+
+The shipped pipeline deviates from the plan above in one deliberate way, and confirms the rest:
+
+- **NuGet Trusted Publishing (OIDC) replaced the static `NUGET_API_KEY` secret.** nuget.org shipped
+  Trusted Publishing for GitHub Actions after this ADR was written: the release workflow exchanges
+  a short-lived GitHub OIDC token for a 1-hour NuGet API key at publish time
+  (`NuGet/login@v1`), scoped to a nuget.org policy tied to this repository, the `release.yml`
+  workflow file, and the `release` GitHub Environment. No long-lived NuGet credential is stored as
+  a secret anywhere. This is a strictly stronger version of the "NuGet API key ... as CI secrets"
+  language above and should be preferred over static keys going forward.
+- **A `release` GitHub Environment with required reviewers** (any one of the project's two
+  leaders, self-review disallowed) gates the publish job, adding a human approval step between
+  "tag pushed to a reviewed GitHub Release" and "packages leave the building" — a second layer on
+  top of the Alternatives-considered mitigation of not publishing from local `git push --tags`.
+- `RASP_CORE_SNK_BASE64` signing and MinVer tag-driven versioning (`MinVerTagPrefix=v`) work as
+  designed. First real release: `v1.2.0` (Rasp.Net, Rasp.Net.Core, and the other eight packages
+  from [ADR 008](008-nuget-packaging.md)'s map), published via this pipeline.
 
 ### Positive ✅
 

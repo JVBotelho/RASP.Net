@@ -159,6 +159,8 @@ All code documentation (XML docs), error messages, and commit messages must be i
 2. **Draft PRs:** We encourage opening a **Draft PR** early in the process to discuss architectural decisions before finalizing the code.
 3. **Code Quality:** Ensure [CodeQL](https://codeql.github.com/) scans pass without new security alerts.
 4. **ADR Updates:** If your PR introduces structural changes, please update or create a new **ADR (Architecture Decision Record)** in the `docs/ADR` folder.
+5. **PR title format:** CI lints the PR title against [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, etc. — lowercase subject, no scope required). Squash-merges use the PR title as the commit message, which feeds directly into the generated `CHANGELOG.md` (see [RELEASING.md](RELEASING.md)), so an unconventional title fails the `Lint` workflow.
+6. **Adding a dependency:** this repo uses [Central Package Management](https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management) — add the `<PackageVersion>` entry to the root [`Directory.Packages.props`](Directory.Packages.props), not a `Version=` attribute on the `<PackageReference>` in your `.csproj` (the `modules/` demo target is intentionally excluded from this).
 
 We value **collaboration over gatekeeping**. If your PR needs optimization, we'll help during code review.
 

@@ -5,6 +5,7 @@
 ![Architecture](https://img.shields.io/badge/Architecture-Composite-blue?style=for-the-badge)
 ![Build](https://img.shields.io/github/actions/workflow/status/JVBotelho/RASP.Net/build.yml?style=for-the-badge)
 ![Coverage](https://img.shields.io/codecov/c/github/JVBotelho/RASP.Net?style=for-the-badge)
+[![NuGet](https://img.shields.io/nuget/v/Rasp.Net?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/Rasp.Net)
 [![Threat Model](https://img.shields.io/badge/📄_Threat_Model-Read-orange?style=for-the-badge)](docs/ATTACK_SCENARIOS.md)
 [![Reverse Engineering](https://img.shields.io/badge/🕵️_Anti--Debug-Research-blueviolet?style=for-the-badge)](docs/REVERSE_ENGINEERING.md)
 
@@ -18,6 +19,32 @@
 > * **Do not deploy to production** environments handling real assets (PII, Financial Data) without a full security audit.
 > * **API Stability:** Public interfaces and interception signatures may undergo **breaking changes** to optimize for zero-allocation performance.
 > * **Security:** While designed to block attacks, this engine is currently being tuned for false positives/negatives.
+
+---
+
+## 📦 Installation
+
+Packages are published to NuGet.org under lockstep SemVer (see [RELEASING.md](RELEASING.md)).
+Install the meta-package for the default experience — **Phase A only**, no runtime patching pulled
+in transitively:
+
+```bash
+dotnet add package Rasp.Net
+```
+
+Then wire it up:
+
+```csharp
+builder.Services.AddRasp();
+```
+
+Individual guards are also available standalone (useful if you only need one, e.g. for trimming):
+`Rasp.Net.Core`, `Rasp.Net.AspNetCore`, `Rasp.Net.Grpc`, `Rasp.Net.EntityFrameworkCore`,
+`Rasp.Net.AdoNet`, `Rasp.Net.HttpClient`, `Rasp.Net.SystemTextJson`.
+
+`Rasp.Net.RuntimePatching` (MonoMod-based guards) is **opt-in only** — it is never a transitive
+dependency of `Rasp.Net` — and carries its own AOT-incompatibility and AV/EDR-flagging warnings.
+See [ADR 008](docs/ADR/008-nuget-packaging.md) for the full package map and risk boundary.
 
 ---
 
@@ -142,7 +169,10 @@ sequenceDiagram
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Development)
+
+The composite/submodule setup below is the **development** workflow — for consuming the SDK in
+your own project, use the [Installation](#-installation) section above instead.
 
 ### 1. Clone with Submodules
 
@@ -248,17 +278,16 @@ features (Stage 3): a security product nobody can `dotnet add package` is a repo
 - [x] CLR Profiler + taint tracking ([ADR 006](docs/ADR/006-sink-instrumentation-strategy.md) Phase C — v1 scope: `String.Concat(string, string)` propagation)
 - [x] Ambient execution context: correlated source → sink alerts ([ADR 007](docs/ADR/007-execution-context.md))
 
-### 📦 Stage 1 — Ship it as a product (NuGet)
+### ✅ Stage 1 — Ship it as a product (NuGet) — shipped 2026-07-06
 
-Starts once ADRs 006/007 are finalized and merged.
-
-- [ ] **NuGet packages** for the managed SDK. The cross-platform, supported-API core
+- [x] **NuGet packages** for the managed SDK. The cross-platform, supported-API core
       (ADR 006 Phase A guards + the ADR 007 context layer) is the installable product;
       MonoMod runtime patching (Phase B) stays opt-in; the CLR profiler (Phase C) ships
-      separately as a Windows-only advanced preview.
-- [ ] **Multi-target `net8.0;net10.0`** so both supported LTS lines can adopt.
-- [ ] **SemVer + release pipeline** — versioned, signed packages (the CI signing hook is
-      already wired; see [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md) addendum point 5).
+      separately as a Windows-only advanced preview. See [Installation](#-installation).
+- [x] **Multi-target `net8.0;net10.0`** so both supported LTS lines can adopt.
+- [x] **SemVer + release pipeline** ([ADR 009](docs/ADR/009-versioning-and-release-pipeline.md)) —
+      tag-driven MinVer versioning, Central Package Management, Conventional Commits + generated
+      changelog, and NuGet Trusted Publishing (no static API key). First release: `v1.2.0`.
 
 ### 🌐 Stage 2 — OWASP Incubator submission
 
@@ -268,7 +297,7 @@ Before submitting:
       `good-first-issue` backlog (taint-propagation targets are ideal starter issues).
 - [ ] Isolate and clearly label the intentionally-vulnerable demo target (`modules/`) so its
       known-vulnerable packages are never mistaken for product dependencies.
-- [ ] **Recruit a second project leader** — current OWASP policy requires multiple leaders
+- [x] **Recruit a second project leader** — current OWASP policy requires multiple leaders
       (not all from the same employer), so this gates the application itself.
 - [ ] Start the [OSSF Best Practices](https://www.bestpractices.dev/) self-certification —
       a Lab-promotion criterion that is cheap to begin early.
@@ -311,11 +340,24 @@ Sentinel work than the 2021 edition's A04/A09 had been:
 | **A10 Mishandling of Exceptional Conditions** (error messages/stack traces leaking system detail) | ⬜ Deferred | Lean Sentinel ([ADR 004](docs/ADR/004-memory-disclosure-protection.md) — accepted, implementation deferred) |
 | A03 (Software Supply Chain), A04 (Cryptographic Failures), A06 (Insecure Design), A07 (Authentication Failures) | Out of scope | Dependency/CI-CD integrity, cryptography, architecture-level design review, and authentication are a different tooling category than a sink-based RASP; deliberately not attempted here. |
 
+Second half of the Stage 3 track: the **AI/LLM boundary**
+([ADR 011](docs/ADR/011-ai-llm-boundary.md)), covering the OWASP
+[LLM Top 10 (2025)](https://genai.owasp.org/llm-top-10/) and
+[Agentic Top 10 (2026)](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/)
+where a sink-based RASP has ground truth. The position is deliberately narrow: treat the model
+as an untrusted **source** (its output becomes tainted data, enforced by the existing sink
+guards — LLM05/ASI05) and the agent tool call as an instrumentable **boundary** (function
+allowlist, argument inspection, system-prompt canary — LLM06/LLM07/ASI02). No claim of
+detecting prompt injection itself — that is probabilistic classification, kept behind an
+opt-in, audit-mode seam. Ships as a separate package, `Rasp.Instrumentation.Ai`, so services
+without LLM traffic never carry it.
+
 ### 🔭 Stage 4 — Depth, platform reach, foundation
 
 - [ ] **Widen taint propagation** beyond `String.Concat(string, string)`: `string.Format`,
       interpolation lowering, `Substring`, `StringBuilder` — the gap [ADR 006](docs/ADR/006-sink-instrumentation-strategy.md)
-      documents as v1's accepted limitation.
+      documents as v1's accepted limitation. Also extends how far LLM-output taint
+      ([ADR 011](docs/ADR/011-ai-llm-boundary.md)) survives before reaching a sink.
 - [ ] **Native test harness + Linux profiler port** — the IL rewriter currently has only a smoke
       test, and the profiler build is Windows-only (the non-Windows PAL scaffolding already exists
       in `profiler_pal.h`). Linux is where most ASP.NET Core production runs; this is what removes

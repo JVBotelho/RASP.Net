@@ -49,40 +49,40 @@ comes before new detection features (Stage 3)** — a security product nobody ca
 
 ---
 
-## 📦 Stage 1 — Ship It as a Product (NuGet)
+## ✅ Stage 1 — Ship It as a Product (NuGet) — Shipped 2026-07-06
 
-**Focus:** Packaging, versioning, multi-targeting. Starts once ADRs 006/007 are finalized and merged.
+**Focus:** Packaging, versioning, multi-targeting.
 
-- [ ] **NuGet packages** for the managed SDK, split along the risk boundary that ADR 006's phases
-      already define:
+- [x] **NuGet packages** for the managed SDK, split along the risk boundary that ADR 006's phases
+      already define ([ADR 008](ADR/008-nuget-packaging.md)):
     - The **cross-platform, supported-API core** (Phase A guards + the ADR 007 context layer) is
-      the installable product — no runtime hacks, works under Native AOT and trimming.
-    - **MonoMod runtime patching** (Phase B) stays a separate, opt-in package — fragile across
-      runtime versions, not AOT-compatible, and reflection-emit-based (can be flagged by AV/EDR),
-      so it must never be a silent transitive dependency.
-    - The **CLR profiler** (Phase C) ships separately as a **Windows-only advanced preview**.
-- [ ] **Multi-target `net8.0;net10.0`** so both supported LTS lines can adopt. Today the SDK
-      targets .NET 10 only, which excludes the majority of production deployments still on net8.0.
-- [ ] **SemVer + release pipeline** — versioned, signed packages published from CI. The signing
-      hook is already wired ([ADR 006](ADR/006-sink-instrumentation-strategy.md) addendum point 5);
-      what's missing is the tag-triggered publish flow and a versioning policy. Current state:
-      `<Version>1.0.5-elite</Version>` is hard-coded per-`.csproj`, no git tags exist, and
-      `-elite` isn't a valid SemVer pre-release ordering token. Plan:
-    - **MinVer** for tag-driven SemVer (version comes from the latest git tag, no manual
-      `<Version>` edits); tagging `v1.1.0` produces `1.1.0`, commits after a tag become
-      `1.1.1-alpha.0.N` pre-releases. Drop the `-elite` suffix from the version string itself
-      (keep "Elite" as README marketing copy only) and use standard `-alpha`/`-beta`/`-rc` labels.
-    - **Central Package Management** (`Directory.Packages.props` at repo root, all
-      `PackageReference` versions moved to `<PackageVersion>`,
-      `ManagePackageVersionsCentrally=true`) — fixes observed package-version drift across
-      projects (e.g. `Google.Protobuf` pinned to different versions in different `.csproj`s).
-    - **Conventional Commits** + generated `CHANGELOG.md` (e.g. `git-cliff`) — the git history
-      already uses `feat:`/`chore:`/`fix:`, just needs enforcing and wiring to changelog
-      generation.
-    - **SemVer discipline for a security library:** loosening a default or changing block→audit
-      behavior is MINOR at least; removing/renaming a public API or changing the activation model
-      (e.g. profiler becoming default-on) is MAJOR; detection-rule additions are MINOR (they can
-      change runtime behavior); pure fixes are PATCH.
+      the installable product — no runtime hacks, works under Native AOT and trimming. Ships as
+      the `Rasp.Net` meta-package plus per-guard packages (`Rasp.Net.Core`, `Rasp.Net.AspNetCore`,
+      `Rasp.Net.Grpc`, `Rasp.Net.EntityFrameworkCore`, `Rasp.Net.AdoNet`, `Rasp.Net.HttpClient`,
+      `Rasp.Net.SystemTextJson`).
+    - **MonoMod runtime patching** (Phase B) ships as the separate, opt-in `Rasp.Net.RuntimePatching`
+      package — never a transitive dependency of `Rasp.Net`.
+    - The **CLR profiler** (Phase C) remains unpublished — still a **Windows-only advanced
+      preview** per ADR 008, ships once the native test harness (Stage 4) lands.
+- [x] **Multi-target `net8.0;net10.0`** so both supported LTS lines can adopt.
+- [x] **SemVer + release pipeline** ([ADR 009](ADR/009-versioning-and-release-pipeline.md)):
+    - **MinVer** for tag-driven SemVer (`MinVerTagPrefix=v`) — no manual `<Version>` edits, the
+      tag is the single source of truth.
+    - **Central Package Management** (`Directory.Packages.props` at repo root,
+      `ManagePackageVersionsCentrally=true`) — the `modules/` demo target is excluded via its own
+      `Directory.Packages.props` override so its intentionally-pinned-vulnerable packages stay
+      untouched.
+    - **Conventional Commits**, enforced on PR titles (`amannn/action-semantic-pull-request`, so
+      squash-merges stay clean), + generated `CHANGELOG.md` via `git-cliff`.
+    - **NuGet Trusted Publishing (OIDC)** — no static `NUGET_API_KEY`. The release workflow
+      exchanges a short-lived GitHub OIDC token for a 1-hour NuGet API key, scoped to a
+      nuget.org policy tied to this repo, `release.yml`, and the `release` GitHub Environment
+      (required reviewers, self-review disallowed).
+    - **SemVer discipline for a security library** — documented in [RELEASING.md](../RELEASING.md):
+      loosening a default or changing block→audit behavior is MINOR at least; removing/renaming a
+      public API or changing the activation model is MAJOR; detection-rule additions are MINOR;
+      pure fixes are PATCH.
+    - First release published through this pipeline: **`v1.2.0`** (all ten packages, lockstep).
 
 ---
 
@@ -98,11 +98,9 @@ comes before new detection features (Stage 3)** — a security product nobody ca
 - [ ] **Isolate the intentionally-vulnerable demo target** (`modules/`) so its known-vulnerable
       packages are never mistaken for product dependencies — clear labeling, separate solution
       filter, and exclusion from any dependency-scanning badge the product advertises.
-- [ ] **Recruit a second project leader.** Current OWASP policy requires multiple leaders (not
+- [x] **Recruit a second project leader.** Current OWASP policy requires multiple leaders (not
       all from the same employer), and all leaders need admin on the repository — this gates the
-      application itself, it is not a post-acceptance nicety. An engaged external contributor
-      (someone who has already read the code deeply enough to open a real issue) is the natural
-      first candidate.
+      application itself, it is not a post-acceptance nicety.
 - [ ] **Start the [OSSF Best Practices](https://www.bestpractices.dev/) self-certification.**
       A Lab-promotion criterion that costs little to begin early — it is a questionnaire, and
       most of the answers (license, tests, SECURITY.md, release discipline) already exist.
@@ -168,6 +166,40 @@ Lean Sentinel work than the 2021 edition's A04/A09 had been.
   (`0xCDCD` / `0xABAB` heap patterns in production). Under the 2025 Top 10 this maps cleanly to
   A10 rather than being spread across the 2021 edition's A04/A09.
 
+### The AI/LLM boundary — OWASP GenAI track ([ADR 011](ADR/011-ai-llm-boundary.md))
+
+Second half of the Stage 3 feature track, sequenced after the classic rows above. .NET services
+that call LLMs (`Microsoft.Extensions.AI`, Semantic Kernel, local models) expose a boundary the
+RASP cannot see today: model output reaching a guarded sink is inspected on content only, with
+nothing recording that it came from a model, and agent tool calls execute unconstrained. The
+position taken in ADR 011 is deliberately narrow — **treat the model as an untrusted source and
+the tool call as an instrumentable boundary; do not sell a prompt-injection detector**.
+Classifying prompts is probabilistic and already a crowded space; enforcing at the sink with
+request-level provenance is what this codebase does that classifiers cannot.
+
+Ships as a separate opt-in package, `Rasp.Instrumentation.Ai`, per the
+[ADR 008](ADR/008-nuget-packaging.md) risk split. Three phases, deterministic first:
+
+- [ ] **Phase 1 — LLM output as taint source.** A `DelegatingChatClient` wrapper marks every
+      response segment via the existing `RaspTaintSensor` and stamps `RaspContext`, so a sink
+      alert can say *"this SQL text derives from a model response in request X"*. Sink guards
+      unchanged. Covers **LLM05** (Improper Output Handling) and the execution half of
+      **ASI05**.
+- [ ] **Phase 2 — Tool-call guard.** Function allowlist plus argument inspection through the
+      existing engines, running before the tool body; a system-prompt canary scan
+      (exact-match, `SearchValues`, shared mechanism with Lean Sentinel) on responses. Covers
+      **LLM06**, **LLM07**, **ASI02/ASI03**.
+- [ ] **Phase 3 — Inbound heuristics + classifier seam (audit-mode default).** Span-based
+      scanning for the deterministically detectable subset (invisible Unicode Tags block,
+      base64 smuggling, known jailbreak signatures) and an `IPromptClassifier` interface for
+      wiring external services (Azure Prompt Shields, LLM Guard) out-of-band. Indicators, not
+      verdicts — never block-by-default.
+
+Validation follows [ADR 001](ADR/001-composite-architecture.md): the victim app gains one
+endpoint backed by a deterministic fake `IChatClient` (scripted responses, no live model), and
+`attack/exploit_llm.py` drives poisoned-output → tool-call → sink chains in CI, mirroring the
+XSS/SQLi suites.
+
 ---
 
 ## 🔭 Stage 4 — Depth, Platform Reach, Foundation
@@ -178,7 +210,9 @@ Lean Sentinel work than the 2021 edition's A04/A09 had been.
       string-interpolation lowering, `Substring`, `StringBuilder` — the gap
       [ADR 006](ADR/006-sink-instrumentation-strategy.md) documents as v1's accepted limitation.
       Each new propagation target is an isolated, testable IL-rewrite case (and a candidate
-      `good-first-issue` from Stage 2).
+      `good-first-issue` from Stage 2). Since [ADR 011](ADR/011-ai-llm-boundary.md), this work
+      has a second consumer: every propagation target widened here also extends how far
+      LLM-output taint survives before reaching a sink.
 - [ ] **Native test harness + Linux profiler port.** The IL rewriter currently has only a smoke
       test; profiler bugs corrupt JIT/runtime state rather than throwing catchable exceptions, so
       a real native test harness precedes any port. The profiler build is Windows-only today, but
@@ -213,8 +247,9 @@ Lean Sentinel work than the 2021 edition's A04/A09 had been.
 | **Sink Guards** | ✅ SQL · SSRF · Path Traversal · Command Injection · Deserialization | packaged (core vs. opt-in MonoMod) | + XXE, LDAP | — |
 | **Taint Tracking** | ✅ v1 — `String.Concat(string, string)`, Windows-only | ships as advanced preview | — | widened propagation, Linux port |
 | **Source → Sink Correlation** | ✅ `RaspContext` (ADR 007) | — | — | — |
+| **AI/LLM Boundary** | ❌ Model traffic invisible | — | **`Rasp.Instrumentation.Ai` — taint source, tool-call guard, canary (ADR 011)** 🤖 | heuristics + classifier seam |
 | **Memory Guard (Lean Sentinel)** | ⬜ Accepted, deferred (ADR 004) | — | **implemented (A10)** | — |
 | **Windows Native Security** | ✅ Native C++ guard | — | — | — |
 | **Linux Native Security** | ⚠️ Managed `Debugger.IsAttached` only | — | — | **eBPF kernel hooks** 🐧 |
-| **Packaging** | ❌ Source-only, `net10.0` | **NuGet, `net8.0;net10.0`, signed SemVer** 📦 | — | — |
-| **Governance** | MIT, threat model, SECURITY.md | **OWASP Incubator** 🌐 | Incubator → Lab | **.NET Foundation** |
+| **Packaging** | ✅ NuGet, `net8.0;net10.0`, tag-driven SemVer, Trusted Publishing 📦 | — | — | — |
+| **Governance** | MIT, threat model, SECURITY.md, two project leaders | **OWASP Incubator** 🌐 | Incubator → Lab | **.NET Foundation** |
