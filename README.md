@@ -293,12 +293,16 @@ features (Stage 3): a security product nobody can `dotnet add package` is a repo
 
 Before submitting:
 
-- [ ] Community baseline: `CODE_OF_CONDUCT.md`, issue templates, `GOVERNANCE.md`,
-      `good-first-issue` backlog (taint-propagation targets are ideal starter issues).
+- [ ] Community baseline: `CODE_OF_CONDUCT.md`, issue templates, `GOVERNANCE.md` still open.
+      [x] `good-first-issue` backlog seeded — [docs/good-first-issues.md](docs/good-first-issues.md)
+      (native profiler taint-propagation targets) and
+      [docs/good-first-issues-dotnet.md](docs/good-first-issues-dotnet.md) (.NET-only gaps).
 - [ ] Isolate and clearly label the intentionally-vulnerable demo target (`modules/`) so its
       known-vulnerable packages are never mistaken for product dependencies.
 - [x] **Recruit a second project leader** — current OWASP policy requires multiple leaders
       (not all from the same employer), so this gates the application itself.
+      [@EderBorella](https://github.com/EderBorella) joined as collaborator and required
+      reviewer on the `release` environment; bus factor is now 2.
 - [ ] Start the [OSSF Best Practices](https://www.bestpractices.dev/) self-certification —
       a Lab-promotion criterion that is cheap to begin early.
 - [ ] Draft the OWASP project-page content (`index.md`, description, roadmap) in advance —

@@ -1,7 +1,7 @@
 # ADR 010: OWASP Incubator Submission — Pre-Submission Plan
 
 **Date:** 2026-07-03
-**Status:** 🟡 Proposed
+**Status:** 🟡 In Progress — item 1 done (2026-07-06), items 2–5 outstanding
 **Priority:** High — Stage 2 of the roadmap; everything here happens *before* the application is filed
 **Builds on:** [ADR 008](008-nuget-packaging.md) / [ADR 009](009-versioning-and-release-pipeline.md) (published, versioned packages are the maturity signal the application leans on)
 
@@ -15,9 +15,13 @@ source, vendor-neutral, security-focused — is already met: MIT license, a publ
 steering. What is *not* met is the surrounding structure OWASP evaluates and, in two cases,
 hard-requires:
 
-1. **Leadership.** Current OWASP policy requires multiple project leaders, not all from the same
-   employer, each with admin on the repository. Today there is one maintainer. This is not a
-   post-acceptance nicety — it gates the application itself.
+1. **Leadership.** ✅ Resolved 2026-07-06. Current OWASP policy requires multiple project leaders,
+   not all from the same employer, each with admin on the repository. RASP.Net now has a second
+   leader, [@EderBorella](https://github.com/EderBorella), added as a repository collaborator and
+   as a required reviewer on the `release` GitHub Environment (see [ADR 009](009-versioning-and-release-pipeline.md)) —
+   so no release publishes without a second person's sign-off. Both leaders work on the project as
+   a personal/hobby effort with no employer involved, which trivially satisfies "not all from the
+   same employer" (OWASP) and `contributors_unassociated` (OSSF Gold, see item 4 below).
 2. **The intentionally-vulnerable demo target.** `modules/dotnet-grpc-library-api` exists to be
    attacked; it pins known-vulnerable packages on purpose. To an OWASP reviewer (or any
    dependency scanner) glancing at the repository, those look like *product* dependencies unless
@@ -37,7 +41,7 @@ slowest item (recruiting a second leader) has to start first.
 Treat the pre-submission work as an ordered workstream and file the application only when items
 1–5 below are done. Ordered by lead time, longest first:
 
-### 1. Recruit a second project leader (start immediately)
+### 1. Recruit a second project leader (start immediately) — ✅ Done (2026-07-06)
 
 The natural candidate is an engaged external contributor — someone who has already read the code
 deeply enough to open a substantive issue or PR. The `good-first-issue` backlog (item 2) doubles
@@ -46,17 +50,29 @@ method the profiler should instrument) are ideal starter issues — small, well-
 `String.Concat` as an existing pattern to copy. The leader requirement is satisfied by a person,
 not a checkbox, so this item has the most schedule risk and no shortcut.
 
+**Resolution:** [@EderBorella](https://github.com/EderBorella) joined as second leader —
+repository collaborator and required reviewer on the `release` environment. Bus factor is now 2,
+unblocking both the OWASP leadership requirement and the OSSF Silver/Gold `bus_factor` criteria
+(item 4). What's still outstanding for this to be more than a name on a list: `roles_responsibilities`
+and `access_continuity` (OSSF Silver) need a written decision model — see item 2's `GOVERNANCE.md`,
+still open.
+
 ### 2. Community baseline
 
 - `CODE_OF_CONDUCT.md` — Contributor Covenant, unmodified; OWASP projects also inherit the OWASP
   Code of Conduct after acceptance, and the two coexist.
 - `GOVERNANCE.md` — states the decision model (currently: maintainer decides, ADRs record),
   how a contributor becomes a committer, and how the leader set changes. Honest about present
-  size rather than aspirational.
+  size rather than aspirational. Now doubles as the place to record the two-leader structure from
+  item 1 and satisfy OSSF Silver's `roles_responsibilities` / `access_continuity`.
 - Issue templates (bug / detection gap / false positive — the last two being the report types a
   RASP uniquely attracts) and a PR template that documents the Conventional Commits format from
   [ADR 009](009-versioning-and-release-pipeline.md).
-- A seeded `good-first-issue` backlog per item 1.
+- ✅ Seeded `good-first-issue` backlog per item 1 — done 2026-07-06:
+  [docs/good-first-issues.md](../good-first-issues.md) (taint-propagation targets, native profiler)
+  and [docs/good-first-issues-dotnet.md](../good-first-issues-dotnet.md) (.NET-only OWASP Top 10
+  gaps and the ADR 011 AI/LLM boundary). Filing these as actual GitHub issues is blocked on the
+  issue templates above landing first.
 
 ### 3. Isolate the intentionally-vulnerable demo target
 
@@ -75,6 +91,19 @@ A [bestpractices.dev](https://www.bestpractices.dev/) passing badge is a Lab-pro
 that costs little to begin now: it is a questionnaire, and most answers (license, tests,
 SECURITY.md, release discipline once ADR 009 lands) already exist. Starting it pre-submission
 also surfaces any gap cheaply while the fix is a small PR rather than a review finding.
+
+**Gap analysis against the current criteria (2026-07-06):** Passing is within reach with no code
+changes — CodeQL (static analysis), `TreatWarningsAsErrors`/`AnalysisLevel=latest-all`, Codecov
+collection, SemVer-tagged releases with generated changelogs, and `SECURITY.md`'s 48h response SLA
+already cover most MUST items; remaining gaps are confirming Issues/Discussions are public and
+documenting the vulnerability-fixed-with-CVE process for when it's first needed. **Silver and Gold
+are gated by item 2 above, not by item 1 anymore**: `bus_factor` (now 2, resolved) stops blocking,
+but `governance`, `code_of_conduct`, `roles_responsibilities`, and `access_continuity` are still
+missing documents, and Gold additionally needs `two_person_review` enforced via branch protection
+(today's required reviewer is on the *release* environment/publish gate, not on PR merge) and
+`test_statement_coverage90`/`test_branch_coverage80`, neither measured yet. Gold is not a near-term
+goal given project size; Silver becomes reachable once item 2's `GOVERNANCE.md` and
+`CODE_OF_CONDUCT.md` land.
 
 ### 5. Draft the OWASP project page in advance
 
@@ -116,16 +145,17 @@ Not pre-submission work, but decided now so nothing is discovered mid-transfer:
   (bots, required workflows, member rules) apply thereafter. The .NET Foundation option
   (Stage 4) is unaffected — OWASP mandates repo *location*, the Foundation only requires
   publicly accessible code — but the overlap of two governance regimes is real.
-- The second-leader requirement makes the submission date dependent on a person who doesn't
-  exist yet. This is the plan's critical path and it is not fully under the maintainer's control.
+- ~~The second-leader requirement makes the submission date dependent on a person who doesn't
+  exist yet. This is the plan's critical path and it is not fully under the maintainer's control.~~
+  Resolved 2026-07-06 — see item 1. Remaining critical path is now item 2 (community/governance
+  docs), which is fully within the maintainers' control and has no external dependency.
 - Acceptance creates a permanent maintenance duty: OWASP flags projects with stale pages or no
   release activity as inactive, so Stage 2 quietly commits the project to a release cadence.
 
 ### Mitigations
 
-- Item 1 starts before everything else and runs in parallel with items 2–5; if no candidate
-  emerges, the fallback is deliberate outreach (OWASP Slack, .NET security community) rather
-  than waiting passively on the issue tracker.
+- Item 1 started before everything else and ran in parallel with items 2–5; it closed 2026-07-06
+  via direct outreach rather than waiting on the issue tracker.
 - The transfer checklist (secrets, Codecov, badges) is written into the release runbook *before*
   acceptance, so nothing has to be discovered mid-transfer.
 - The drafted project page doubles as the application's project description — the work is spent
