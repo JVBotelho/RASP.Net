@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -7,7 +6,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-<!--    <CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>-->
+    <!--    <CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>-->
     <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
@@ -26,41 +25,31 @@
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1903</WarningsNotAsErrors>
     <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
-    <PackageReference Include="Google.Protobuf" Version="3.35.1" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.81.1">
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.AspNetCore" />
+    <PackageReference Include="Grpc.Tools">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
   </ItemGroup>
-
   <ItemGroup>
     <Protobuf Include="Protos\benchmark_models.proto" GrpcServices="Both" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\modules\dotnet-grpc-library-api\LibrarySystem.Contracts\LibrarySystem.Contracts.csproj" />
-
     <ProjectReference Include="..\Rasp.Core\Rasp.Core.csproj" />
-
     <ProjectReference Include="..\Rasp.Instrumentation.Grpc\Rasp.Instrumentation.Grpc.csproj" />
-
     <ProjectReference Include="..\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false">
       <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
       <UndefineProperties>TargetFramework</UndefineProperties>
     </ProjectReference>
-
     <ProjectReference Include="..\Rasp.Instrumentation.RuntimePatching\Rasp.Instrumentation.RuntimePatching.csproj" />
-
     <ProjectReference Include="..\Rasp.Instrumentation.EntityFrameworkCore\Rasp.Instrumentation.EntityFrameworkCore.csproj" />
-
     <ProjectReference Include="..\Rasp.Instrumentation.HttpClient\Rasp.Instrumentation.HttpClient.csproj" />
   </ItemGroup>
-
 </Project>

@@ -86,6 +86,7 @@ Professional-grade security documentation demonstrating **Purple Team** capabili
 |:---------|:------------|
 | 📄 [Threat Model & Attack Scenarios](docs/ATTACK_SCENARIOS.md) | STRIDE analysis: gRPC SQL Injection, Protobuf Tampering, GC Pressure DoS |
 | 🕵️ [Reverse Engineering & Anti-Tamper](docs/REVERSE_ENGINEERING.md) | Native C++ protection: `IsDebuggerPresent`, PEB manipulation, timing checks |
+| 📦 [Release Process & SemVer Policy](RELEASING.md) | The release pipeline and semantic versioning policy for security updates |
 
 ---
 

@@ -7,7 +7,7 @@
         <!-- Matches Rasp.Core/Rasp.Bootstrapper/Rasp.Instrumentation.Grpc: without this, the
              project defaults to a stable 1.0.0, and NuGet rejects a stable package depending
              on prerelease Rasp.Net.Core (NU5104). Lockstep versioning is ADR 009's subject. -->
-        <Version>1.2.0</Version>
+
     </PropertyGroup>
 
     <PropertyGroup>
