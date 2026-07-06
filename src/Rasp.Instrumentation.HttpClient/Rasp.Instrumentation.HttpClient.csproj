@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Rasp.Core\Rasp.Core.csproj" />
@@ -9,9 +9,25 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Matches Rasp.Core/Rasp.Bootstrapper/Rasp.Instrumentation.Grpc: without this, the
+         project defaults to a stable 1.0.0, and NuGet rejects a stable package depending
+         on prerelease Rasp.Net.Core (NU5104). Lockstep versioning is ADR 009's subject. -->
+    <Version>1.2.0</Version>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Rasp.Net.HttpClient</PackageId>
+    <Description>SsrfGuard: outbound HttpClient SSRF detection for RASP.Net via DelegatingHandler and ConnectCallback. Phase A: no runtime patching.</Description>
+    <PackageTags>rasp;security;httpclient;ssrf;runtime-application-self-protection</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>

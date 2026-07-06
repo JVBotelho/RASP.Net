@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Rasp.Core.Internal;
 
 namespace Rasp.Core.Engine.Sql;
 
@@ -42,11 +43,11 @@ internal static class SqlHeuristics
         "/*"
     ];
 
-    private static readonly System.Buffers.SearchValues<string> _highRiskSearchValues =
-        System.Buffers.SearchValues.Create(HighRiskTokens, StringComparison.OrdinalIgnoreCase);
+    private static readonly MultiStringSearch _highRiskSearchValues =
+        MultiStringSearch.Create(HighRiskTokens, StringComparison.OrdinalIgnoreCase);
 
-    private static readonly System.Buffers.SearchValues<string> _contextualSearchValues =
-        System.Buffers.SearchValues.Create(ContextualPatterns, StringComparison.OrdinalIgnoreCase);
+    private static readonly MultiStringSearch _contextualSearchValues =
+        MultiStringSearch.Create(ContextualPatterns, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Analyzes the input for SQL injection patterns.
@@ -61,13 +62,13 @@ internal static class SqlHeuristics
     public static double CalculateScore(ReadOnlySpan<char> normalizedInput)
     {
         // 1. Contextual Pattern Analysis (High Confidence, Low False Positives)
-        if (normalizedInput.ContainsAny(_contextualSearchValues))
+        if (_contextualSearchValues.ContainsAny(normalizedInput))
         {
             return CriticalThreat;
         }
 
         // 2. High-Risk Token Analysis (Structural Keywords)
-        if (normalizedInput.ContainsAny(_highRiskSearchValues))
+        if (_highRiskSearchValues.ContainsAny(normalizedInput))
         {
             return CriticalThreat;
         }

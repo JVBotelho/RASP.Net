@@ -1,22 +1,42 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>1.0.5-elite</Version>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Rasp.Net</PackageId>
+    <Description>RASP.Net meta-package: AddRasp() plus the full Phase A guard set (ASP.NET Core, gRPC, EF Core, ADO.NET, HttpClient, System.Text.Json). Never references runtime patching or the native profiler - installing this pulls in zero runtime patching.</Description>
+    <PackageTags>rasp;security;waf;runtime-application-self-protection</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <!-- Phase A only (see docs/ADR/008-nuget-packaging.md) - this meta-package must never
+       reference Rasp.Instrumentation.RuntimePatching (Phase B) or the native profiler
+       (Phase C), so installing Rasp.Net alone never pulls in runtime patching. -->
   <ItemGroup>
     <ProjectReference Include="..\Rasp.Core\Rasp.Core.csproj" />
+    <ProjectReference Include="..\Rasp.Instrumentation.AdoNet\Rasp.Instrumentation.AdoNet.csproj" />
+    <ProjectReference Include="..\Rasp.Instrumentation.AspNetCore\Rasp.Instrumentation.AspNetCore.csproj" />
+    <ProjectReference Include="..\Rasp.Instrumentation.EntityFrameworkCore\Rasp.Instrumentation.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Rasp.Instrumentation.Grpc\Rasp.Instrumentation.Grpc.csproj" />
+    <ProjectReference Include="..\Rasp.Instrumentation.HttpClient\Rasp.Instrumentation.HttpClient.csproj" />
+    <ProjectReference Include="..\Rasp.Instrumentation.SystemTextJson\Rasp.Instrumentation.SystemTextJson.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.1" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>

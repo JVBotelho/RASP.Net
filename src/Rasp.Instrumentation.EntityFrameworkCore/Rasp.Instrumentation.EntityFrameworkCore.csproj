@@ -1,17 +1,36 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Rasp.Core\Rasp.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />
+    <!-- EFCore ships one major version per TFM's runtime; pin per-TFM so net8.0 restores
+         against the EFCore 8 LTS line instead of failing on EFCore 10's net10.0-only support. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.11" Condition="'$(TargetFramework)' == 'net8.0'" />
   </ItemGroup>
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Matches Rasp.Core/Rasp.Bootstrapper/Rasp.Instrumentation.Grpc: without this, the
+         project defaults to a stable 1.0.0, and NuGet rejects a stable package depending
+         on prerelease Rasp.Net.Core (NU5104). Lockstep versioning is ADR 009's subject. -->
+    <Version>1.2.0</Version>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Rasp.Net.EntityFrameworkCore</PackageId>
+    <Description>SqlSinkGuard: Entity Framework Core SQL injection detection for RASP.Net. Phase A: uses the public IDbCommandInterceptor hook, no runtime patching.</Description>
+    <PackageTags>rasp;security;efcore;sql-injection;runtime-application-self-protection</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>
