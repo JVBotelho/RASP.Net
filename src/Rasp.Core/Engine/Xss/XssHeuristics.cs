@@ -1,5 +1,5 @@
-using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using Rasp.Core.Internal;
 
 // ReSharper disable ReplaceSliceWithRangeIndexer
 
@@ -9,23 +9,23 @@ namespace Rasp.Core.Engine.Xss;
 internal static class XssHeuristics
 {
     // High Risk Tags: Immediate execution probability.
-    private static readonly SearchValues<string> ExecutionTags = SearchValues.Create(
+    private static readonly MultiStringSearch ExecutionTags = MultiStringSearch.Create(
         ["<link"],
         StringComparison.OrdinalIgnoreCase);
 
     // Suspicious Tags: Context-dependent risk.
-    private static readonly SearchValues<string> SuspiciousTags = SearchValues.Create(
+    private static readonly MultiStringSearch SuspiciousTags = MultiStringSearch.Create(
         ["<img", "<svg", "<video", "<audio", "<body", "<input", "<details", "<form"],
         StringComparison.OrdinalIgnoreCase);
 
     // Dangerous Protocols: Pseudo-protocols that execute code.
-    private static readonly SearchValues<string> DangerousProtocols = SearchValues.Create(
+    private static readonly MultiStringSearch DangerousProtocols = MultiStringSearch.Create(
         ["data:image/svg+xml"],
         StringComparison.OrdinalIgnoreCase);
 
-    // DOM Events: Optimized for SIMD Aho-Corasick search (NET 9+)
+    // DOM Events: Optimized for SIMD Aho-Corasick search (NET 9+); manual fallback on net8.0.
     // Scans for all 14 patterns simultaneously.
-    private static readonly SearchValues<string> DomEventsSearch = SearchValues.Create(
+    private static readonly MultiStringSearch DomEventsSearch = MultiStringSearch.Create(
         [
             "onload", "onerror", "onclick", "onmouseover", "onfocus",
             "onblur", "onchange", "onsubmit", "onkeydown", "onkeyup",
@@ -35,12 +35,12 @@ internal static class XssHeuristics
 
     public static double ScorePatterns(ReadOnlySpan<char> input)
     {
-        if (input.ContainsAny(ExecutionTags))
+        if (ExecutionTags.ContainsAny(input))
         {
             return 1.0;
         }
 
-        if (input.ContainsAny(DangerousProtocols))
+        if (DangerousProtocols.ContainsAny(input))
         {
             return 1.0;
         }
@@ -50,7 +50,7 @@ internal static class XssHeuristics
             return 1.0;
         }
 
-        if (input.ContainsAny(SuspiciousTags))
+        if (SuspiciousTags.ContainsAny(input))
         {
             return 0.5;
         }
@@ -64,7 +64,7 @@ internal static class XssHeuristics
 
         while (true)
         {
-            int idx = remaining.IndexOfAny(DomEventsSearch);
+            int idx = DomEventsSearch.IndexOfAny(remaining);
 
             if (idx < 0) break;
 

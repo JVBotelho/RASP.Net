@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Build, Pack & Publish
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      DOTNET_VERSION: '10.0.x'
+      SOLUTION_NAME: 'Rasp.sln' 
+      BUILD_CONFIG_REL: 'Release'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Assert History Depth for MinVer
+      run: |
+        if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+          echo "::error title=Shallow Clone::Repository is shallow. MinVer requires full history."
+          exit 1
+        fi
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        dotnet-quality: 'preview'
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_NAME }} --locked-mode
+
+    - name: Provision release signing key
+      shell: bash
+      env:
+        SNK_BASE64: ${{ secrets.RASP_CORE_SNK_BASE64 }}
+      run: |
+        if [ -z "$SNK_BASE64" ]; then
+          echo "::error title=Missing Secret::RASP_CORE_SNK_BASE64 is empty or not configured."
+          exit 1
+        fi
+        echo "$SNK_BASE64" | base64 -d > src/Rasp.Core/RaspCore.snk
+
+    - name: Build
+      run: dotnet build ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-restore
+
+    - name: Run Tests
+      run: dotnet test ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-build --verbosity normal
+
+    - name: Pack
+      run: dotnet pack ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-build --output ./artifacts/packages
+
+    - name: Generate Changelog
+      id: git-cliff
+      uses: orhun/git-cliff-action@v3
+      with:
+        config: cliff.toml
+        args: -vv --latest --strip header
+      env:
+        OUTPUT: CHANGELOG.md
+        GITHUB_REPO: ${{ github.repository }}
+
+    - name: NuGet login (OIDC -> temp API key)
+      # Requests a short-lived (1h) API key from nuget.org via GitHub OIDC, per the
+      # Trusted Publishing policy configured on nuget.org for this repo/workflow/environment.
+      # Requested right before the push below since the temp key expires in 1h.
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: ${{ secrets.NUGET_USER }}
+
+    - name: Publish NuGet packages
+      run: dotnet nuget push "artifacts/packages/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+    - name: Update GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body: ${{ steps.git-cliff.outputs.content }}
+        files: artifacts/packages/*

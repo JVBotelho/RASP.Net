@@ -1,36 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <IsPackable>false</IsPackable>
-        <!-- Must carry the same public key token as Rasp.Core to be a valid
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Must carry the same public key token as Rasp.Core to be a valid
              InternalsVisibleTo friend (see src/Rasp.Core/InternalsVisibleTo.cs). PublicSign
              against the committed RaspCore.pub yields that token without the private
              RaspCore.snk (gitignored, not present in CI) - same approach as
              src/Rasp.Core/Rasp.Core.csproj. -->
-        <SignAssembly>true</SignAssembly>
-        <PublicSign>true</PublicSign>
-        <AssemblyOriginatorKeyFile>..\src\Rasp.Core\RaspCore.pub</AssemblyOriginatorKeyFile>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="coverlet.collector" Version="10.0.1"/>
-        <PackageReference Include="FluentAssertions" Version="8.10.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.2" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
-        <PackageReference Include="xunit" Version="2.9.3"/>
-        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Using Include="Xunit"/>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\src\Rasp.Bootstrapper\Rasp.Bootstrapper.csproj" />
-      <ProjectReference Include="..\src\Rasp.Core\Rasp.Core.csproj" />
-    </ItemGroup>
-
+    <SignAssembly>true</SignAssembly>
+    <PublicSign>true</PublicSign>
+    <AssemblyOriginatorKeyFile>..\src\Rasp.Core\RaspCore.pub</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\Rasp.Bootstrapper\Rasp.Bootstrapper.csproj" />
+    <ProjectReference Include="..\src\Rasp.Core\Rasp.Core.csproj" />
+  </ItemGroup>
 </Project>

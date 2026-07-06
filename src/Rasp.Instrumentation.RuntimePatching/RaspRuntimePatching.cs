@@ -18,6 +18,12 @@ public static class RaspRuntimePatching
     /// before any JIT inlining happens for I/O or Process operations.
     /// Example: The first line in Program.cs
     /// </summary>
+    /// <remarks>
+    /// <para><b>WARNING:</b> This package relies on runtime patching via MonoMod.</para>
+    /// <para>It is <b>incompatible with Native AOT</b> compilation. Furthermore, 
+    /// because it modifies execution paths at runtime, it may be flagged by AV/EDR 
+    /// security products.</para>
+    /// </remarks>
     public static void Initialize(IServiceProvider serviceProvider)
     {
         if (_initialized) return;

@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Runtime.CompilerServices;
 using Rasp.Core.Abstractions;
 using Rasp.Core.Engine.Xss;
+using Rasp.Core.Internal;
 using Rasp.Core.Models;
 using Rasp.Core.Enums;
 
@@ -16,7 +17,7 @@ public sealed class XssDetectionEngine : IDetectionEngine
     private static readonly SearchValues<char> SafeSyntax =
         SearchValues.Create("<>&\"'\\%:");
 
-    private static readonly SearchValues<string> KillSwitchPatterns = SearchValues.Create(
+    private static readonly MultiStringSearch KillSwitchPatterns = MultiStringSearch.Create(
         [
             "<script", "javascript:", "vbscript:", "data:text", "view-source:",
             "feed:", "<meta", "<iframe", "<object", "<embed", "<applet", "<style", "<template", "<noscript"
@@ -43,7 +44,7 @@ public sealed class XssDetectionEngine : IDetectionEngine
 
         if (!payload.ContainsAny(SafeSyntax)) return DetectionResult.Safe();
 
-        if (payload.ContainsAny(KillSwitchPatterns))
+        if (KillSwitchPatterns.ContainsAny(payload))
             return DetectionResult.Threat("XSS", "Signature Match (Raw)", ThreatSeverity.Critical);
 
         char[]? pooledObj = null;
@@ -56,7 +57,7 @@ public sealed class XssDetectionEngine : IDetectionEngine
             int effectiveLength = CanonicalizeInPlace(payload, buffer);
             var cleanPayload = buffer.Slice(0, effectiveLength);
 
-            if (cleanPayload.ContainsAny(KillSwitchPatterns))
+            if (KillSwitchPatterns.ContainsAny(cleanPayload))
                 return DetectionResult.Threat("XSS", "Signature Match (Obfuscated)", ThreatSeverity.Critical);
 
             if (XssPolyglotDetector.CalculatePolyglotScore(cleanPayload) >= 1.0)
