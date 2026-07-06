@@ -1,13 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>1.2.0</Version>
-  </PropertyGroup>
 
+  </PropertyGroup>
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>Rasp.Net</PackageId>
@@ -15,7 +13,6 @@
     <PackageTags>rasp;security;waf;runtime-application-self-protection</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-
   <!-- Phase A only (see docs/ADR/008-nuget-packaging.md) - this meta-package must never
        reference Rasp.Instrumentation.RuntimePatching (Phase B) or the native profiler
        (Phase C), so installing Rasp.Net alone never pulls in runtime patching. -->
@@ -28,17 +25,14 @@
     <ProjectReference Include="..\Rasp.Instrumentation.HttpClient\Rasp.Instrumentation.HttpClient.csproj" />
     <ProjectReference Include="..\Rasp.Instrumentation.SystemTextJson\Rasp.Instrumentation.SystemTextJson.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
   </ItemGroup>
-
   <ItemGroup>
     <!-- Conditional on the prebuilt DLL actually being present: NativeGuard.cs already
          degrades gracefully at runtime (catch DllNotFoundException -> managed-only mode)
@@ -52,5 +46,4 @@
       <PackagePath>runtimes/win-x64/native/</PackagePath>
     </None>
   </ItemGroup>
-
 </Project>

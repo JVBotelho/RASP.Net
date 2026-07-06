@@ -4,6 +4,8 @@ Thank you for your interest in RASP.Net. This project explores the intersection 
 
 We welcome contributions from all skill levels, but we hold code to strict engineering standards. This document explains our performance philosophy and technical requirements.
 
+For information on how we version and release packages, see the [Release Process & SemVer Policy](RELEASING.md).
+
 ---
 
 ## 🎯 Why Performance Matters

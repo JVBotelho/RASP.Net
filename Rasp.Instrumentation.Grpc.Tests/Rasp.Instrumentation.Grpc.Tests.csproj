@@ -1,44 +1,38 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <!-- net10.0-only: depends on modules/dotnet-grpc-library-api (git submodule,
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- net10.0-only: depends on modules/dotnet-grpc-library-api (git submodule,
              a separate repo out of scope for this ADR-008 multi-targeting pass), which
              targets net10.0 exclusively. -->
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="coverlet.collector" Version="10.0.1"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
-        <PackageReference Include="xunit" Version="2.9.3"/>
-        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"/>
-        <PackageReference Include="FluentAssertions" Version="8.1.1"/>
-        <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.9" />
-        <PackageReference Include="Grpc.Tools" Version="2.81.1" PrivateAssets="All" />
-        <PackageReference Include="Grpc.AspNetCore" Version="2.80.0"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Protobuf Include="Protos\test.proto" GrpcServices="Client,Server" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\modules\dotnet-grpc-library-api\LibrarySystem.Contracts\LibrarySystem.Contracts.csproj" />
-        <ProjectReference Include="..\src\Rasp.Core\Rasp.Core.csproj" />
-        <ProjectReference Include="..\src\Rasp.Bootstrapper\Rasp.Bootstrapper.csproj" />
-        <ProjectReference Include="..\src\Rasp.Instrumentation.Grpc\Rasp.Instrumentation.Grpc.csproj" />
-        <ProjectReference Include="..\src\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false">
-            <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
-            <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
-            <UndefineProperties>TargetFramework</UndefineProperties>
-        </ProjectReference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Using Include="Xunit"/>
-    </ItemGroup>
-
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="All" />
+    <PackageReference Include="Grpc.AspNetCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <Protobuf Include="Protos\test.proto" GrpcServices="Client,Server" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\modules\dotnet-grpc-library-api\LibrarySystem.Contracts\LibrarySystem.Contracts.csproj" />
+    <ProjectReference Include="..\src\Rasp.Core\Rasp.Core.csproj" />
+    <ProjectReference Include="..\src\Rasp.Bootstrapper\Rasp.Bootstrapper.csproj" />
+    <ProjectReference Include="..\src\Rasp.Instrumentation.Grpc\Rasp.Instrumentation.Grpc.csproj" />
+    <ProjectReference Include="..\src\Rasp.SourceGenerators\Rasp.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false">
+      <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <UndefineProperties>TargetFramework</UndefineProperties>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
 </Project>
