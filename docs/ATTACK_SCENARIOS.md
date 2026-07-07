@@ -60,7 +60,26 @@ Sending thousands of requests with large strings designed to trigger massive all
 
 ---
 
-## 3. STRIDE Analysis Matrix
+## 3. Trust Boundaries
+
+Every guard in this project exists at one of the following boundaries — the STRIDE matrix in
+Section 4 assumes these as given.
+
+| # | Boundary | Untrusted side | Trusted side | Where it's enforced |
+|:-:|:---|:---|:---|:---|
+| 1 | **Network entrypoint** | External client (player, script, any caller of the gRPC/HTTP endpoint) | The host application's request pipeline | gRPC/ASP.NET Core interceptors ([ADR 002](ADR/002-detection-engine-evolution.md)) — the first point any request-derived byte is inspected. |
+| 2 | **Business logic → sink** | Data already inside the process (may carry attacker-controlled content even after entrypoint checks, e.g. via indirect/obfuscated flows) | The actual dangerous operation (SQL execution, filesystem access, process spawn, outbound HTTP, deserialization) | Sink-level guards — `SqlSinkGuard`, `SsrfGuard`, `PathTraversalGuard`, `CommandInjectionGuard`, `DeserializationGuard` ([ADR 006](ADR/006-sink-instrumentation-strategy.md)). This is the boundary the sink-centric pivot exists to guard, independent of what happened at boundary 1. |
+| 3 | **Managed runtime → native/OS** | The managed CLR process being profiled (a debugger, an unloader, or a hostile chained profiler could tamper with it) | The native profiler and integrity guard's own memory and control flow | `Rasp.Native.Profiler` (CLR profiler API, IL rewriting) and the Native Integrity Guard's PEB/debug-port checks ([ADR 003](ADR/003-native-integrity-guard.md)). |
+| 4 | **In-process inspection → persistent telemetry** | The offending payload, held only in memory during inspection | Logs, metrics, and alert sinks, which persist past the request lifetime | `RaspAlertBus` / `IRaspMetrics`. This boundary is a known one-way risk, not a guard: [SECURITY.md](../../SECURITY.md#3-logging-and-monitoring) warns explicitly that crossing it can persist sensitive snippets, and leaves securing the log destination to the deployment. |
+
+Boundary 2 is the project's core design bet: RASP.Net assumes boundary 1 checks can be bypassed
+(encoding tricks, indirect data flow, taint gaps — see [Known Limitations](#6-known-limitations--mitigation-strategy)
+below) and enforces ground truth at boundary 2 regardless, per the sink-centric architecture
+decision in [ADR 006](ADR/006-sink-instrumentation-strategy.md).
+
+---
+
+## 4. STRIDE Analysis Matrix
 
 | Threat Category | Attack Vector | RASP Mitigation | Status |
 | :--- | :--- | :--- | :--- |
@@ -77,17 +96,17 @@ Sending thousands of requests with large strings designed to trigger massive all
 
 ---
 
-## 4. Exploitation Walkthrough (Red Team Validation)
+## 5. Exploitation Walkthrough (Red Team Validation)
 
 To validate the defense, we developed a Python exploit script mocking a compromised client.
 
-### 4.1. Attack Setup
+### 5.1. Attack Setup
 Generating the gRPC stubs from the `.proto` definition:
 ```bash
 python -m grpc_tools.protoc -I./protos --python_out=./attack --grpc_python_out=./attack library.proto
 ```
 
-### 4.2 The Exploit (`attack/exploit_grpc.py`)
+### 5.2 The Exploit (`attack/exploit_grpc.py`)
 
 This script attempts to inject a SQL payload into the CreateBook method.
 ```python
@@ -111,7 +130,7 @@ try:
 except grpc.RpcError as e:
     print(f"Attack Blocked: {e.details()}")
 ```
-### 4.3. RASP Response (Log Output)
+### 5.3. RASP Response (Log Output)
 
 When the exploit runs, the RASP intercepts and blocks execution:
 ```JSON
@@ -127,7 +146,7 @@ When the exploit runs, the RASP intercepts and blocks execution:
 }
 ```
 
-## 5. Known Limitations & Mitigation Strategy
+## 6. Known Limitations & Mitigation Strategy
 
 | Limitation | Risk | Current Mitigation | Future Enhancement | Risk Acceptance |
 |:-----------|:-----|:------------------|:------------------|:----------------|
