@@ -92,8 +92,8 @@ comes before new detection features (Stage 3)** — a security product nobody ca
 
 ### Before submitting
 
-- [ ] **Community baseline:** `CODE_OF_CONDUCT.md`, issue/PR templates, `GOVERNANCE.md`, and a
-      `good-first-issue` backlog. Taint-propagation targets (each additional `string` method to
+- [x] **Community baseline:** `CODE_OF_CONDUCT.md`, issue/PR templates, and `GOVERNANCE.md` are complete.
+      A `good-first-issue` backlog is seeded. Taint-propagation targets (each additional `string` method to
       instrument) are ideal starter issues — small, well-scoped, with an existing pattern to copy.
 - [ ] **Isolate the intentionally-vulnerable demo target** (`modules/`) so its known-vulnerable
       packages are never mistaken for product dependencies — clear labeling, separate solution
@@ -101,7 +101,7 @@ comes before new detection features (Stage 3)** — a security product nobody ca
 - [x] **Recruit a second project leader.** Current OWASP policy requires multiple leaders (not
       all from the same employer), and all leaders need admin on the repository — this gates the
       application itself, it is not a post-acceptance nicety.
-- [ ] **Start the [OSSF Best Practices](https://www.bestpractices.dev/) self-certification.**
+- [x] **Start the [OSSF Best Practices](https://www.bestpractices.dev/) self-certification.**
       A Lab-promotion criterion that costs little to begin early — it is a questionnaire, and
       most of the answers (license, tests, SECURITY.md, release discipline) already exist.
 - [ ] **Draft the OWASP project-page content** (`index.md`, description, roadmap) in advance.
