@@ -15,7 +15,7 @@
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.1" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="MinVer" Version="5.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.11" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.17" Condition="'$(TargetFramework)' == 'net8.0'" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" Condition="'$(TargetFramework)' == 'net10.0'" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" Condition="'$(TargetFramework)' == ''" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.28" Condition="'$(TargetFramework)' == 'net8.0'" />
