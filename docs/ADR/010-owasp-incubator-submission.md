@@ -1,7 +1,9 @@
 # ADR 010: OWASP Incubator Submission — Pre-Submission Plan
 
 **Date:** 2026-07-03
-**Status:** 🟡 In Progress — item 1 done (2026-07-06), items 2–5 outstanding
+**Status:** 🟡 In Progress — items 1 and 4 (Passing) done; item 2 partial (governance docs landed,
+templates outstanding); items 3, 5, 6 outstanding. Current focus: close 3/5/6 for submission —
+Silver self-certification (item 4) explicitly deferred, not required.
 **Priority:** High — Stage 2 of the roadmap; everything here happens *before* the application is filed
 **Builds on:** [ADR 008](008-nuget-packaging.md) / [ADR 009](009-versioning-and-release-pipeline.md) (published, versioned packages are the maturity signal the application leans on)
 
@@ -26,8 +28,9 @@ hard-requires:
    attacked; it pins known-vulnerable packages on purpose. To an OWASP reviewer (or any
    dependency scanner) glancing at the repository, those look like *product* dependencies unless
    the separation is unmistakable.
-3. **Community machinery.** No `CODE_OF_CONDUCT.md`, no `GOVERNANCE.md`, no issue/PR templates,
-   no curated entry point for a first-time contributor.
+3. **Community machinery.** ✅ Partially resolved 2026-07-06: [`CODE_OF_CONDUCT.md`](../../CODE_OF_CONDUCT.md)
+   and [`GOVERNANCE.md`](../../GOVERNANCE.md) landed, and the `good-first-issue` backlog is the
+   curated entry point for first-time contributors. Still open: issue/PR templates.
 4. **Timing traps.** The `www-project-rasp-net` project-page repository is provisioned by the
    OWASP Foundation under `github.com/OWASP` only *after* acceptance — it cannot be created in
    advance. And after acceptance the main repository must transfer to `github.com/OWASP`, which
@@ -53,19 +56,17 @@ not a checkbox, so this item has the most schedule risk and no shortcut.
 **Resolution:** [@EderBorella](https://github.com/EderBorella) joined as second leader —
 repository collaborator and required reviewer on the `release` environment. Bus factor is now 2,
 unblocking both the OWASP leadership requirement and the OSSF Silver/Gold `bus_factor` criteria
-(item 4). What's still outstanding for this to be more than a name on a list: `roles_responsibilities`
-and `access_continuity` (OSSF Silver) need a written decision model — see item 2's `GOVERNANCE.md`,
-still open.
+(item 4). `roles_responsibilities` and `access_continuity` (OSSF Silver) are now written down in
+item 2's `GOVERNANCE.md`, below.
 
-### 2. Community baseline
+### 2. Community baseline — partially done
 
-- `CODE_OF_CONDUCT.md` — Contributor Covenant, unmodified; OWASP projects also inherit the OWASP
+- ✅ `CODE_OF_CONDUCT.md` — Contributor Covenant, unmodified; OWASP projects also inherit the OWASP
   Code of Conduct after acceptance, and the two coexist.
-- `GOVERNANCE.md` — states the decision model (currently: maintainer decides, ADRs record),
-  how a contributor becomes a committer, and how the leader set changes. Honest about present
-  size rather than aspirational. Now doubles as the place to record the two-leader structure from
-  item 1 and satisfy OSSF Silver's `roles_responsibilities` / `access_continuity`.
-- Issue templates (bug / detection gap / false positive — the last two being the report types a
+- ✅ `GOVERNANCE.md` — states the decision model (two leaders, informal consensus + ADRs for
+  architecturally significant decisions), how a contributor becomes a committer, and access
+  continuity / bus factor. Honest about present size rather than aspirational.
+- Still open: issue templates (bug / detection gap / false positive — the last two being the report types a
   RASP uniquely attracts) and a PR template that documents the Conventional Commits format from
   [ADR 009](009-versioning-and-release-pipeline.md).
 - ✅ Seeded `good-first-issue` backlog per item 1 — done 2026-07-06:
@@ -85,25 +86,27 @@ still open.
   ([ADR 009](009-versioning-and-release-pipeline.md)) for the same reason — its pins are
   intentionally wrong.
 
-### 4. Start the OSSF Best Practices self-certification
+### 4. Start the OSSF Best Practices self-certification — ✅ Passing achieved (2026-07-06)
 
-A [bestpractices.dev](https://www.bestpractices.dev/) passing badge is a Lab-promotion criterion
-that costs little to begin now: it is a questionnaire, and most answers (license, tests,
-SECURITY.md, release discipline once ADR 009 lands) already exist. Starting it pre-submission
-also surfaces any gap cheaply while the fix is a small PR rather than a review finding.
+**Correction (2026-07-06):** OWASP's own Incubator → Lab maturity criteria do **not** require a
+`bestpractices.dev` badge of any specific tier — the actual requirement, verified against OWASP's
+project lifecycle page, is only *"Project registered and self-certification started."* The
+original wording above ("a passing badge is a Lab-promotion criterion") overstated this. Starting
+the questionnaire pre-submission is still worth doing — it's a questionnaire, most answers already
+exist, and it surfaces gaps cheaply as a small PR instead of a review finding — but it was never a
+hard gate on Incubator submission, and isn't one for Lab promotion either.
 
-**Gap analysis against the current criteria (2026-07-06):** Passing is within reach with no code
-changes — CodeQL (static analysis), `TreatWarningsAsErrors`/`AnalysisLevel=latest-all`, Codecov
-collection, SemVer-tagged releases with generated changelogs, and `SECURITY.md`'s 48h response SLA
-already cover most MUST items; remaining gaps are confirming Issues/Discussions are public and
-documenting the vulnerability-fixed-with-CVE process for when it's first needed. **Silver and Gold
-are gated by item 2 above, not by item 1 anymore**: `bus_factor` (now 2, resolved) stops blocking,
-but `governance`, `code_of_conduct`, `roles_responsibilities`, and `access_continuity` are still
-missing documents, and Gold additionally needs `two_person_review` enforced via branch protection
-(today's required reviewer is on the *release* environment/publish gate, not on PR merge) and
-`test_statement_coverage90`/`test_branch_coverage80`, neither measured yet. Gold is not a near-term
-goal given project size; Silver becomes reachable once item 2's `GOVERNANCE.md` and
-`CODE_OF_CONDUCT.md` land.
+**Status:** [Passing badge #13510](https://www.bestpractices.dev/en/projects/13510) achieved
+2026-07-06, embedded in the [README](../../README.md). This already exceeds what either OWASP stage
+requires. Silver self-certification is in progress (governance docs landed —
+[GOVERNANCE.md](../../GOVERNANCE.md), [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md) — bus factor
+2 resolved item 1's blocker on it) but has real remaining gaps (`test_statement_coverage80`,
+`signed_releases`, `version_tags_signed`, `build_repeatable` — the last confirmed empirically
+non-reproducible, not just unmeasured). **Since Silver is not required for submission, closing
+those gaps is explicitly deferred until after Incubator submission** — current priority is items
+3, 5, and 6 below. New code is nonetheless already held to a coverage bar approaching Gold
+(`codecov.yml` patch target 90%) so day-to-day work walks toward Silver/Gold without spending
+dedicated time on the badge itself right now.
 
 ### 5. Draft the OWASP project page in advance
 

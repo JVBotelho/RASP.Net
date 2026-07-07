@@ -1,0 +1,44 @@
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...90"
+  status:
+    # Overall project coverage must not regress vs. the base branch (current baseline ~66%).
+    # Using `target: auto` instead of a hardcoded number means this ratchets up naturally as
+    # coverage improves, instead of going stale the moment someone fixes it.
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+        informational: false
+    # New/changed code is held to the OSSF Gold bar (90% statement) from day one, without
+    # blocking unrelated PRs on the pre-existing 66% project baseline. Codecov's percentage
+    # blends line and branch hits from the Cobertura report rather than reporting them as two
+    # separate numbers, so this is a practical stand-in for OSSF Gold's two-metric ask
+    # (test_statement_coverage90 + test_branch_coverage80), not a literal per-metric gate.
+    # Raised from 80% (Silver's bar) to 90% deliberately: every merge should already be
+    # walking toward Gold, not just Silver, even though Silver itself isn't a near-term goal
+    # (see docs/ADR/010-owasp-incubator-submission.md item 4).
+    patch:
+      default:
+        target: 90%
+        threshold: 0%
+        informational: false
+
+# Excluded from all coverage math (not just display): the intentionally-vulnerable demo
+# target (see docs/ADR/010-owasp-incubator-submission.md item 3 - it is test tooling, not
+# product, and its business logic has no security-relevant coverage bar to meet), test
+# projects themselves (a test assembly trivially "covers" its own methods, which inflates
+# the number without testing anything), and the BenchmarkDotNet harness (not shipped).
+ignore:
+  - "modules/**"
+  - "**/*.Tests/**"
+  - "src/Rasp.Benchmarks/**"
+
+comment:
+  layout: "reach, diff, flags, files"
+  require_changes: false

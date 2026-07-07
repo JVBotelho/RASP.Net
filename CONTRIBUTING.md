@@ -137,6 +137,11 @@ dotnet test
 
 **Requirement:** 100% block rate on known attack vectors. Security is non-negotiable.
 
+**Test policy:** any PR that adds major new functionality (a new guard, a new detection engine, a
+new sink) MUST add corresponding tests to an automated test suite (`*.Tests` project) as part of
+the same PR — see [commit `7ec4f02`](https://github.com/JVBotelho/RASP.Net/commit/7ec4f029f8d6b8143872c9840da6f71b122f59ad)
+for the pattern this follows in practice.
+
 ---
 
 ### 4. Thread Safety

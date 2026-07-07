@@ -1,13 +1,12 @@
 # 🛡️ RASP.Net
 
-![.NET 10](https://img.shields.io/badge/.NET%2010-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
-![Security](https://img.shields.io/badge/Security-RASP-red?style=for-the-badge&logo=shield&logoColor=white)
-![Architecture](https://img.shields.io/badge/Architecture-Composite-blue?style=for-the-badge)
-![Build](https://img.shields.io/github/actions/workflow/status/JVBotelho/RASP.Net/build.yml?style=for-the-badge)
-![Coverage](https://img.shields.io/codecov/c/github/JVBotelho/RASP.Net?style=for-the-badge)
-[![NuGet](https://img.shields.io/nuget/v/Rasp.Net?style=for-the-badge&logo=nuget)](https://www.nuget.org/packages/Rasp.Net)
-[![Threat Model](https://img.shields.io/badge/📄_Threat_Model-Read-orange?style=for-the-badge)](docs/ATTACK_SCENARIOS.md)
-[![Reverse Engineering](https://img.shields.io/badge/🕵️_Anti--Debug-Research-blueviolet?style=for-the-badge)](docs/REVERSE_ENGINEERING.md)
+[![Build](https://img.shields.io/github/actions/workflow/status/JVBotelho/RASP.Net/build.yml)](https://github.com/JVBotelho/RASP.Net/actions/workflows/build.yml)
+[![codecov](https://codecov.io/github/JVBotelho/RASP.Net/graph/badge.svg?token=AY3EBCPICC)](https://codecov.io/github/JVBotelho/RASP.Net)
+[![NuGet](https://img.shields.io/nuget/v/Rasp.Net?logo=nuget)](https://www.nuget.org/packages/Rasp.Net)
+[![OpenSSF Best Practices](https://img.shields.io/cii/level/13510?label=OpenSSF%20Best%20Practices)](https://www.bestpractices.dev/projects/13510)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/JVBotelho/RASP.Net/badge)](https://scorecard.dev/viewer/?uri=github.com/JVBotelho/RASP.Net)
+[![Threat Model](https://img.shields.io/badge/📄_Threat_Model-Read-orange)](docs/ATTACK_SCENARIOS.md)
+[![Reverse Engineering](https://img.shields.io/badge/🕵️_Anti--Debug-Research-blueviolet)](docs/REVERSE_ENGINEERING.md)
 
 > **Runtime Application Self-Protection (RASP) for High-Scale .NET Services**  
 > *Defense that lives inside your application process, operating at the speed of code.*
