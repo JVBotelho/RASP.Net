@@ -17,6 +17,8 @@ env:
   BUILD_CONFIG_REL: 'Release'
   BUILD_CONFIG_DBG: 'Debug'
 
+permissions: read-all
+
 jobs:
   build-and-test:
     name: Build & Test (${{ matrix.os }})
@@ -34,15 +36,15 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       with:
         submodules: recursive
 
-    - name: Setup .NET 10 (Preview)
-      uses: actions/setup-dotnet@v5
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        dotnet-quality: 'preview'
+        dotnet-quality: 'ga'
         cache: true
         cache-dependency-path: |
           **/*.csproj
@@ -74,14 +76,14 @@ jobs:
       run: dotnet test ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-build --verbosity normal --logger "trx;LogFileName=test-results-${{ matrix.os }}.trx" --blame-hang-timeout 5m --collect:"XPlat Code Coverage" --results-directory ./coverage/${{ matrix.os }}
 
     - name: Upload Test Results
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       if: always()
       with:
         name: test-results-${{ matrix.os }}
         path: '**/test-results-*.trx'
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage/${{ matrix.os }}/**/coverage.cobertura.xml
@@ -93,15 +95,15 @@ jobs:
     needs: build-and-test
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       with:
         submodules: recursive
 
-    - name: Setup .NET 10 (Preview)
-      uses: actions/setup-dotnet@v5
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        dotnet-quality: 'preview'
+        dotnet-quality: 'ga'
         cache: true
         cache-dependency-path: |
           **/*.csproj
@@ -122,7 +124,7 @@ jobs:
       run: dotnet pack ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-build --output ./artifacts/packages
 
     - name: Upload packages
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
         name: nuget-packages
         path: |
@@ -140,15 +142,15 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       with:
         submodules: recursive
 
     - name: Setup .NET 10
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        dotnet-quality: 'preview'
+        dotnet-quality: 'ga'
         cache: true
         cache-dependency-path: |
           **/*.csproj
@@ -187,7 +189,7 @@ jobs:
       run: dotnet format ${{ env.SOLUTION_NAME }} --verify-no-changes --verbosity diagnostic --exclude ./modules --no-restore
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
+      uses: github/codeql-action/init@fb84f6228fd846d3c392887f22b18ce2d9139495 # v4
       with:
         languages: csharp
 
@@ -195,7 +197,7 @@ jobs:
       run: dotnet build ${{ env.SOLUTION_NAME }} --configuration ${{ env.BUILD_CONFIG_REL }} --no-restore /p:UseSharedCompilation=false
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      uses: github/codeql-action/analyze@fb84f6228fd846d3c392887f22b18ce2d9139495 # v4
 
   native-profiler-build:
     name: Native Profiler Build (MSVC)
@@ -208,19 +210,19 @@ jobs:
       contents: read
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       with:
         submodules: recursive
 
     - name: Setup MSVC Developer Command Prompt
-      uses: ilammy/msvc-dev-cmd@v1
+      uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
 
     # CodeQL for the native profiler: this repo's only SAST-covered C++, since
     # LoadLibraryW-driven chaining, IL rewriting, and raw metadata parsing live here.
     # build-mode: manual because the actual build happens via the CMake steps below, not an
     # autodetected build system.
     - name: Initialize CodeQL (cpp)
-      uses: github/codeql-action/init@v4
+      uses: github/codeql-action/init@fb84f6228fd846d3c392887f22b18ce2d9139495 # v4
       with:
         languages: cpp
         build-mode: manual
@@ -232,12 +234,12 @@ jobs:
       run: cmake --build src/Rasp.Native.Profiler/build
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      uses: github/codeql-action/analyze@fb84f6228fd846d3c392887f22b18ce2d9139495 # v4
       with:
         category: "/language:cpp"
 
     - name: Upload built DLL
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
         name: Rasp.Native.Profiler-dll
         path: src/Rasp.Native.Profiler/build/*.dll
@@ -258,10 +260,10 @@ jobs:
         cmake --build src/Rasp.Native.Profiler/build-release
 
     - name: Setup .NET 10 (for live-attach smoke test)
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        dotnet-quality: 'preview'
+        dotnet-quality: 'ga'
 
     - name: Build live-attach smoke test fixture
       # -p:Platform=AnyCPU overrides the `Platform=x64` environment variable left behind by
