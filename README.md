@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/github/JVBotelho/RASP.Net/graph/badge.svg?token=AY3EBCPICC)](https://codecov.io/github/JVBotelho/RASP.Net)
 [![NuGet](https://img.shields.io/nuget/v/Rasp.Net?logo=nuget)](https://www.nuget.org/packages/Rasp.Net)
 [![OpenSSF Best Practices](https://img.shields.io/cii/level/13510?label=OpenSSF%20Best%20Practices)](https://www.bestpractices.dev/projects/13510)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/JVBotelho/RASP.Net/badge)](https://scorecard.dev/viewer/?uri=github.com/JVBotelho/RASP.Net)
 [![Threat Model](https://img.shields.io/badge/📄_Threat_Model-Read-orange)](docs/ATTACK_SCENARIOS.md)
 [![Reverse Engineering](https://img.shields.io/badge/🕵️_Anti--Debug-Research-blueviolet)](docs/REVERSE_ENGINEERING.md)
 
