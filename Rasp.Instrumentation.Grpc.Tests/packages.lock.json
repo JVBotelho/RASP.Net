@@ -27,9 +27,9 @@
       },
       "Grpc.Tools": {
         "type": "Direct",
-        "requested": "[2.81.1, )",
-        "resolved": "2.81.1",
-        "contentHash": "me0a6Xyk4Apw5kL2q6dOTZW8YvPnRHyirfxNwEoXwnVZmzS32BiUJFBYWrYvteH0KtEY4uugih+Go8OvIeptJg=="
+        "requested": "[2.82.0, )",
+        "resolved": "2.82.0",
+        "contentHash": "jqD/u8PHvZLCwSu+kxYMjq+wlMYp6qN9Gk1FAjTvS/SDYafPgRwB2wQiKD0yDwX/5BWQnUG3IIOsNPcqgCLVtg=="
       },
       "Microsoft.AspNetCore.TestHost": {
         "type": "Direct",
@@ -341,7 +341,7 @@
         "type": "Project",
         "dependencies": {
           "Grpc.AspNetCore": "[2.80.0, )",
-          "Grpc.Tools": "[2.81.1, )",
+          "Grpc.Tools": "[2.82.0, )",
           "Rasp.Net.Core": "[1.0.0, )"
         }
       },
